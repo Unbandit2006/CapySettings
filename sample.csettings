@@ -3,3 +3,4 @@ age:                Integer = 18
 hasDreams:          Boolean = true
 // assumed benefits (as very hard to calculate)
 calculatedBenefits: Float = 1890684.949
+name:               String = "Bob"              // Based on new AddSetting function, the name should still be Daniel

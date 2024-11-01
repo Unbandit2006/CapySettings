@@ -143,20 +143,32 @@ static char* ConvertTypeToString(CSTokenType type) {
 
 }
 
-void CapySettings_AddSetting( CSettings* pCsettings, CSettingType type, char* name, CSettingValue value ) {
+void CapySettings_AddSetting( CSFile* pCSFile, CSettingType type, char* name, CSettingValue value ) {
     CSettingObj setting = {
         .type = type,
         .value = value,
         .name = name
     };
 
-    if (pCsettings->occupied >= pCsettings->size) {
-        pCsettings->size *= 2;
-        pCsettings->objects = realloc(pCsettings->objects, sizeof(CSettingObj) * pCsettings->size);
-    }
+	bool able = true;
 
-    pCsettings->objects[pCsettings->occupied] = setting;
-    pCsettings->occupied++;
+	for (int i = 0; i < pCSFile->settings->occupied; i++) {
+
+		if (strcmp(name, pCSFile->settings->objects[i].name) == 0) {
+			able = false;
+		}
+
+	}
+
+	if (able == true) {
+		if (pCSFile->settings->occupied >= pCSFile->settings->size) {
+			pCSFile->settings->size *= 2;
+			pCSFile->settings->objects = realloc(pCSFile->settings->objects, sizeof(CSettingObj) * pCSFile->settings->size);
+		}
+
+		pCSFile->settings->objects[pCSFile->settings->occupied] = setting;
+		pCSFile->settings->occupied++;
+	}
 }
 
 int CapySettimgs_SaveFile(CSettings* pCsettings, char* path) {

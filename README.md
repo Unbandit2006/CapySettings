@@ -3,13 +3,11 @@
 This is a library for a new configuration file type.
 
 ```CapySettings
-
 //       name       |     value    
 name:       String  = "CapySettings"
 smart:      Boolean = true
 usefulness: Integer = 10             // out of 10
 version:    Float   = 1.0
-
 ```
 
 ## Reason
@@ -38,55 +36,13 @@ Again if you modified the output please change the flags respective of your chan
 
 ## Documentation
 
-```c
-CSFile CapySettings_OpenFile(char *path, bool debug);
-
-// example
-CSFile settings = CapySettings_OpenFile("sample.csettings", false); // The library includes stdbool.h
-
-```
-First command you should run. Loads command into memory, returns CSFile
-
-
-
-```c
-int CapySettings_ReadFile(CSFile* pCSFile);
-
-// example
-CapySettings_ReadFile(&settings);
-```
-This function lexs, parses, pre-checks, just overall converts the configuration file to be usable by languages.
-
-
-```c
-void CapySettings_CloseFile(CSFile* pCSFile);
-
-// example
-CapySettings_CloseFile(&settings);
-```
-This function deallocates all memory used by the lib.
-
-
-```c
-int CapySettings_GetAsInteger(CSFile* pCSFile, char* name);
-char* CapySettings_GetAsString(CSFile* pCSFile, char* name);
-double CapySettings_GetAsDouble(CSFile* pCSFile, char* name);
-int CapySettings_GetAsBoolean(CSFile* pCSFile, char* name);
-
-// example
-printf("name: %s\n", CapySettings_GetAsString(&settings, "name");
-printf("smart: %i\n", CapySettings_GetAsBoolean(&settings, "smart");
-printf("usefulness: %i\n", CapySettings_GetAsInteger(&settings, "usefulness");
-printf("version: %d\n", CapySettings_GetAsDouble(&settings, "version");
-```
-These functions are different functions that returns different types of the same pair with the same name. 
-You may only call this after CapySettings_ReadFile
-
+[Link to docs](DOC.md)
 
 
 ## Next steps
-- [] Fix CapySettings_AddSetting to not add multiple settings of the same name.
+- [x] Fix CapySettings_AddSetting to not add multiple settings of the same name.
 - [] Implement arrays
+- [] Make a CapySettings_EditSetting function to edit values in the CapySettings
 
 ## Future
 - [] Python implementation

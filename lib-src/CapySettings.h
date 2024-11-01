@@ -132,7 +132,7 @@ int CapySettings_ReadFile(CSFile* pCSFile);
 */
 CSFile CapySettings_OpenFile(char *path, bool debug);
 
-void CapySettings_AddSetting(CSettings* pCsettings, CSettingType type, char* name, CSettingValue value);
+void CapySettings_AddSetting(CSFile* pCSFile, CSettingType type, char* name, CSettingValue value);
 
 int CapySettimgs_SaveFile(CSettings* pCsettings, char* path);
 

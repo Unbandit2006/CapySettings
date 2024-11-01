@@ -1,4 +1,4 @@
-#include <stdio.h>
+//#include <stdio.h>
 #include "lib-src/CapySettings.h"
 
 int main() {
@@ -6,7 +6,7 @@ int main() {
 
 	CapySettings_ReadFile(&settings);
 
-	printf("%s\n", CapySettings_GetAsString(&settings, "name"));
+	//printf("%s\n", CapySettings_GetAsString(&settings, "name"));
 
 	CapySettings_CloseFile(&settings);
 
