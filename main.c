@@ -4,7 +4,7 @@
 int main() {
 	//CSFile string = CapySettings_LoadFromString("name:               String = \"Daniel\"\nage:                Integer = 18\nhasDreams:          Boolean = true\n// assumed benefits (as very hard to calculate)\ncalculatedBenefits: Float = 1896.890000\nname:               String = \"Bob\"\n// Based on new AddSetting function, the name should still be Daniel", true);
 
-	FILE* pfile = fopen("/mnt/c/Dev/CapySettings/sample.csettings", "rb");
+	FILE* pfile = fopen("sample.csettings", "rb");
 	CSFile string = CapySettings_LoadFromFile(pfile, true);
 
 	CapySettings_ReadFile(&string);
