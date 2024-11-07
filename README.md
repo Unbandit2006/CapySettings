@@ -48,38 +48,47 @@ Again if you modified the output please change the flags respective of your chan
 	- [x] New function CapySettings_LoadFromFile(FILE* pFile, bool debug);
 		Purpose is to leave opening to developer, and simply create the proper structs
 
-- [] Implement Ada notation
-	For example:
-		Variable1, Variable2, Variable3: Integer = 1, 2, 3
+- [ ] Implement Ada notation
+	```capysettings
+	// For example:
+	Variable1, Variable2, Variable3: Integer = 1, 2, 3
+	```
 
 
 --- Version 2 ---
-- [] Float conversion is iffy, and not precise
-	For example:
-		calculatedBenefits: Float = 1896.87
+- [ ] Float conversion is iffy, and not precise
+	```capysettings
+	//For example:
+	calculatedBenefits: Float = 1896.87
 		
-		Returns:
-			"calculatedBenefits": 1896.869995
+	// Returns:
+	//	"calculatedBenefits": 1896.869995
+	// Should return:
+	//  "calculatedBenefits": 1896.87
 
-- [] Implement arrays
-- [] Make a CapySettings_EditSetting function to edit values in the CapySettings
-- [] Inplace Literals
-	For example:
-		song: String = "Adieu"
-		name: String = name    // "Adieu"
+- [ ] Implement arrays
+- [ ] Make a CapySettings_EditSetting function to edit values in the CapySettings
+- [ ] Inplace Literals
+	```capysettings
+	// For example:
+	song: String = "Adieu"
+	name: String = name    // "Adieu"
+	```
 
 
 ## Consideration
 - New datatypes for different size
-	For example:
-		Int64     (default, Integer|Int)
+	```capysettings
+	// For example:
+		Int64     // (default, Integer|Int)
 		Int32    
 		Int16
 		Int8
 		
-		String64  (default, String)
+		String64  // (default, String)
 		String32
 		...
+	```
 
 ## Future
-- [] Python implementation
+- [ ] Python implementation

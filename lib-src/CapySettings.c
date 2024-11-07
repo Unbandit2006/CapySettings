@@ -214,8 +214,6 @@ int CapySettimgs_SaveFile(CSettings* pCsettings, char* path) {
 	returns 10 Missing colon
 	*/
 int CapySettings_ReadFile( CSFile* pCSFile ) {
-
-	printf("Content: %s\n", pCSFile->data);
 		
     int lineCount = 1;
 	int lineCountC = 1;
@@ -304,6 +302,13 @@ int CapySettings_ReadFile( CSFile* pCSFile ) {
                 string[end - start + 1] = '\0'; // TODO: Needs to be freed
 
                 AddToken(&pCSFile->tokens, TOKEN_STRING_VALUE, string, lineCount);
+
+                pCSFile->pos++;
+                lineCountC++;
+            } break;
+
+            case ',': {
+                AddToken(&pCSFile->tokens, TOKEN_COMMA, NULL, lineCount);
 
                 pCSFile->pos++;
                 lineCountC++;
@@ -404,6 +409,49 @@ int CapySettings_ReadFile( CSFile* pCSFile ) {
         }
 
 	}
+
+    ////////////////////////
+    /// LITERAL COUNTER ///
+    //////////////////////
+    // typedef struct {
+    //     int* count;
+    //     int size;
+    //     int occupied;
+    // } literalCount;
+
+    // literalCount literalList;
+    // literalList.size = 10;
+    // literalList.occupied = 0;
+    // literalList.count = calloc(literalList.size, sizeof(int));
+
+    // int total = 0;
+    // int prevLine = 1;
+    // for (int i=0; i < pCSFile->tokens.occupied; i++) {
+    //     if (prevLine == pCSFile->tokens.tokens[i].line) {
+    //         if (pCSFile->tokens.tokens[i].type == TOKEN_LITERAL) {
+    //             total++;
+    //             printf("ONGOING: %i\n", total);
+    //         }
+
+    //     } else {
+    //         if (literalList.occupied >= literalList.size) {
+    //             literalList.size *= 2;
+    //             literalList.count = realloc(&literalList.count, sizeof(int) * literalList.size);
+    //         }
+
+    //         literalList.count[literalList.occupied] = total;
+    //         printf("%i, %i\n", total, literalList.count[literalList.occupied]);
+    //         literalList.occupied++;
+
+    //         prevLine = pCSFile->tokens.tokens[i].line;
+    //         total = 0;
+    //     }
+    // }
+
+    // literalList.occupied = 0;
+    // literalList.size = 0;
+    // free(literalList.count);
+    // literalList.count = NULL;
 
     //////////////////
     /// PRECHECKER ///

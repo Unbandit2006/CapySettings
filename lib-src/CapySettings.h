@@ -12,6 +12,7 @@ typedef enum {
     TOKEN_LITERAL,
     TOKEN_EQUAL,
     TOKEN_COLON,
+    TOKEN_COMMA,
 
     TOKEN_FLOAT,
     TOKEN_FLOAT_VALUE,

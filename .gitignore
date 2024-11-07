@@ -1,3 +1,5 @@
 *.10x
 .idea
 message.text
+main
+main.exe
