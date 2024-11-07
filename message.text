@@ -1,0 +1,13 @@
+Very close to release
+
+Current progress:
+  [x] Fix CapySettings_AddSetting to not add multiple settings of the same name.
+
+  [x] Fix library for linux. Skeeto reported bug, I got the same results.
+	  [x] Change reading to be buffer based
+	  [x] New function CapySettings_LoadFromFile(FILE* pFile, bool debug);
+		Purpose is to leave opening to developer, and simply create the proper structs
+
+  [] Implement Ada notation
+	For example:
+	  Variable1, Variable2, Variable3: Integer = 1, 2, 3
