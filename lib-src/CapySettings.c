@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 #include "CapySettings.h"
 
@@ -30,60 +31,22 @@ CSTokenType keywordType[KEYWORD_COUNT] = {
 
 /*
 Loads CapySettings file into memory
-
-returns CSFile if good
-returns CSFile { .data = NULL, .pos = -1, .debug = debug } if file not found
-returns CSFile { .data = NULL, .pos = -2, .debug = debug } if couldn't allocate memory
-returns CSFile { .data = NULL, .pos = -3, .debug = debug } if couldn't put data into memory
 */
-CSFile CapySettings_OpenFile( char *path, bool debug ) {
+CSFile CapySettings_LoadFromFile(FILE* pFile, bool debug) {
 
-	CSFile csettings = { 0 };
-    CSFile error = {
-        .data = NULL,
-        .pos = -1,
-        .debug = debug,
-    };
+	fseek(pFile, 0, SEEK_END);
+	int fileSize = ftell(pFile);	
+	fseek(pFile, 0, SEEK_SET);
 
-    FILE* fp = fopen(path, "rb");
-    if ( !fp ) {
-        if (debug) {
-            fprintf(stdout, "{CapySettings} Error opening file '%s'.\n", path);
-        }
-
-        return error;
-    }
-
-    fseek ( fp, 0L, SEEK_END );
-    int size = ftell ( fp );
-    rewind( fp );
-
-    char* buffer = calloc( size + 1, sizeof(char) );
-    if ( !buffer ) {
-        if (debug) {
-            fprintf(stdout, "{CapySettings} Error allocating memory.\n");
-        }
-
-        error.pos = -2;
-
-        return error;
-    }
-
-    if ( fread( buffer, sizeof(char), size, fp ) != size ) {
-        if (debug) {
-            fprintf(stdout, "{CapySettings} Error reading entire file.\n");
-        }
-
-        error.pos = -3;
-
-        return error;
-    }
-
-    buffer[size] = '\0';
-
-    fclose( fp );
-
-    // CSFile stuffs
+	char* string = calloc(fileSize, sizeof(char));
+	fread(string, 1, fileSize, pFile);
+	string[fileSize] = '\0';
+	
+	CSFile file = {
+		.data = string,
+		.pos = 0,
+		.debug = debug,
+	};
 
     CSettings settings = {
         .size = 10,
@@ -97,13 +60,38 @@ CSFile CapySettings_OpenFile( char *path, bool debug ) {
         .tokens = calloc(10, sizeof(CSToken)),
     };
 
-    csettings.data = buffer;
-    csettings.pos = 0;
-    csettings.debug = debug;
-    csettings.tokens = tokenList;
-    csettings.settings = settings;
+	file.settings = settings;
+	file.tokens = tokenList;
+	file.type = 0;
 
-    return csettings;
+	return file;
+}
+
+CSFile CapySettings_LoadFromString(char* string, bool debug) {
+
+	CSFile file = {
+		.data = string,
+		.pos = 0,
+		.debug = debug,
+	};
+
+    CSettings settings = {
+        .size = 10,
+        .occupied = 0,
+        .objects = calloc(10, sizeof(CSettingObj) ),
+    };
+
+    CSTokenList tokenList = {
+        .occupied = 0,
+        .size = 10,
+        .tokens = calloc(10, sizeof(CSToken)),
+    };
+
+	file.settings = settings;
+	file.tokens = tokenList;
+	file.type = 1;
+
+	return file;
 }
 
 static void AddToken( CSTokenList* pList, CSTokenType type, char* value, int line ) {
@@ -152,22 +140,22 @@ void CapySettings_AddSetting( CSFile* pCSFile, CSettingType type, char* name, CS
 
 	bool able = true;
 
-	for (int i = 0; i < pCSFile->settings->occupied; i++) {
+	for (int i = 0; i < pCSFile->settings.occupied; i++) {
 
-		if (strcmp(name, pCSFile->settings->objects[i].name) == 0) {
+		if (strcmp(name, pCSFile->settings.objects[i].name) == 0) {
 			able = false;
 		}
 
 	}
 
 	if (able == true) {
-		if (pCSFile->settings->occupied >= pCSFile->settings->size) {
-			pCSFile->settings->size *= 2;
-			pCSFile->settings->objects = realloc(pCSFile->settings->objects, sizeof(CSettingObj) * pCSFile->settings->size);
+		if (pCSFile->settings.occupied >= pCSFile->settings.size) {
+			pCSFile->settings.size *= 2;
+			pCSFile->settings.objects = realloc(pCSFile->settings.objects, sizeof(CSettingObj) * pCSFile->settings.size);
 		}
 
-		pCSFile->settings->objects[pCSFile->settings->occupied] = setting;
-		pCSFile->settings->occupied++;
+		pCSFile->settings.objects[pCSFile->settings.occupied] = setting;
+		pCSFile->settings.occupied++;
 	}
 }
 
@@ -182,7 +170,7 @@ int CapySettimgs_SaveFile(CSettings* pCsettings, char* path) {
     for (int i = 0; i < pCsettings->occupied; i++) {
         switch (pCsettings->objects[i].type) {
             case STRING: {
-                fprintf(fp, "%s: String = \"%s\"\n", pCsettings->objects[i].name, pCsettings->objects[i].value);
+                fprintf(fp, "%s: String = \"%s\"\n", pCsettings->objects[i].name, pCsettings->objects[i].value.String);
             } break;
                 
             case BOOLEAN: {
@@ -194,7 +182,7 @@ int CapySettimgs_SaveFile(CSettings* pCsettings, char* path) {
             } break;
 
             case INTEGER: {
-                fprintf(fp, "%s: Integer = %i\n", pCsettings->objects[i].name, pCsettings->objects[i].value);
+                fprintf(fp, "%s: Integer = %i\n", pCsettings->objects[i].name, pCsettings->objects[i].value.Integer);
             } break;
 
             case FLOAT: {
@@ -226,6 +214,8 @@ int CapySettimgs_SaveFile(CSettings* pCsettings, char* path) {
 	returns 10 Missing colon
 	*/
 int CapySettings_ReadFile( CSFile* pCSFile ) {
+
+	printf("Content: %s\n", pCSFile->data);
 		
     int lineCount = 1;
 	int lineCountC = 1;
@@ -391,7 +381,7 @@ int CapySettings_ReadFile( CSFile* pCSFile ) {
                         return 4;
                     }
                     memcpy(string, pCSFile->data + start, end - start + 1);
-                    string[end - start + 2] = '\0'; // TODO: Needs to be freed
+                    string[end - start + 1] = '\0'; 
 
                     if (isFloat == true) {
                         AddToken(&pCSFile->tokens, TOKEN_FLOAT_VALUE, string, lineCount);
@@ -490,28 +480,28 @@ int CapySettings_ReadFile( CSFile* pCSFile ) {
                     case TOKEN_STRING_VALUE: {
                         CSettingValue value;
                         value.String = pCSFile->tokens.tokens[i + 4].value;
-                        CapySettings_AddSetting(&pCSFile->settings, STRING, pCSFile->tokens.tokens[i].value, value);
+                        CapySettings_AddSetting(pCSFile, STRING, pCSFile->tokens.tokens[i].value, value);
                     
                     } break;
 
                     case TOKEN_INTEGER_VALUE: {
                         CSettingValue value;
                         value.Integer = atoi(pCSFile->tokens.tokens[i + 4].value);
-                        CapySettings_AddSetting(&pCSFile->settings, INTEGER, pCSFile->tokens.tokens[i].value, value);
+                        CapySettings_AddSetting(pCSFile, INTEGER, pCSFile->tokens.tokens[i].value, value);
                     
                     } break;
 
                     case TOKEN_BOOLEAN_TRUE: {
                         CSettingValue value;
                         value.Boolean = true;
-                        CapySettings_AddSetting(&pCSFile->settings, BOOLEAN, pCSFile->tokens.tokens[i].value, value);
+                        CapySettings_AddSetting(pCSFile, BOOLEAN, pCSFile->tokens.tokens[i].value, value);
                     
                     } break;
 
                     case TOKEN_BOOLEAN_FALSE: {
                         CSettingValue value;
                         value.Boolean = false;
-                        CapySettings_AddSetting(&pCSFile->settings, BOOLEAN, pCSFile->tokens.tokens[i].value, value);
+                        CapySettings_AddSetting(pCSFile, BOOLEAN, pCSFile->tokens.tokens[i].value, value);
                     
                     } break;
 
@@ -519,8 +509,8 @@ int CapySettings_ReadFile( CSFile* pCSFile ) {
                         char* end;
 
                         CSettingValue value;
-                        value.Float = strtod(pCSFile->tokens.tokens[i + 4].value, &end);
-                        CapySettings_AddSetting(&pCSFile->settings, FLOAT, pCSFile->tokens.tokens[i].value, value);                       
+                        value.Float = strtof(pCSFile->tokens.tokens[i + 4].value, &end);
+                        CapySettings_AddSetting(pCSFile, FLOAT, pCSFile->tokens.tokens[i].value, value);
                     
                     } break;
                 }
@@ -558,6 +548,8 @@ int CapySettings_GetAsInteger( CSFile* pCSFile, char* name ) {
 
         }
     }
+
+    return 0;
 }
 
 /*
@@ -577,6 +569,8 @@ char* CapySettings_GetAsString( CSFile* pCSFile, char* name ) {
 
         }
     }
+
+    return "";
 }
 
 /*
@@ -584,18 +578,20 @@ char* CapySettings_GetAsString( CSFile* pCSFile, char* name ) {
 
     if value != Float then returns 0.0
 */
-double CapySettings_GetAsDouble( CSFile* pCSFile, char* name ) {
+float CapySettings_GetAsFloat( CSFile* pCSFile, char* name ) {
     for (int i = 0; i < pCSFile->settings.occupied; i++) {
         if (strcmp(pCSFile->settings.objects[i].name, name) == 0) {
             
             if (pCSFile->settings.objects[i].type == FLOAT) {
                 return pCSFile->settings.objects[i].value.Float;
             } else {
-                return 0.0;
+                return 0.0f;
             }
 
         }
     }
+
+    return 0.0f;
 }
 
 /*
@@ -619,21 +615,25 @@ int CapySettings_GetAsBoolean( CSFile* pCSFile, char* name ) {
 
 void CapySettings_CloseFile(CSFile* pCSFile) {
 
-    free( pCSFile->data );
-    pCSFile->data = NULL;
-    pCSFile->pos = 0;
+	if (pCSFile->type == 0) {
+		free(pCSFile->data);
+		pCSFile->data = NULL;
+		pCSFile->pos = 0;
+	}
 
     if (pCSFile->debug) { 
+		printf("TOKEN COUNT: %i\n", pCSFile->tokens.occupied);
+
         printf("{\n");
         for (int i = 0; i < pCSFile->settings.occupied; i++) {
             switch (pCSFile->settings.objects[i].type) {
                 case STRING: {
-                    printf("\t\"%s\": \"%s\",\n", pCSFile->settings.objects[i].name, pCSFile->settings.objects[i].value);
+                    printf("\t\"%s\": \"%s\",\n", pCSFile->settings.objects[i].name, pCSFile->settings.objects[i].value.String);
                 } break;
                 
                 case BOOLEAN:
                 case INTEGER: {
-                    printf("\t\"%s\": %i,\n", pCSFile->settings.objects[i].name, pCSFile->settings.objects[i].value);
+                    printf("\t\"%s\": %i,\n", pCSFile->settings.objects[i].name, pCSFile->settings.objects[i].value.Integer);
                 } break;
 
                 case FLOAT: {
@@ -656,3 +656,4 @@ void CapySettings_CloseFile(CSFile* pCSFile) {
         }
     }
 }
+

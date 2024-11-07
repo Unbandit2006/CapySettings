@@ -48,7 +48,7 @@ typedef enum {
 
 typedef union {
     int   Integer;
-    double Float; // done to get more percision than a float
+    float Float; 
     bool  Boolean;
     char* String;
 } CSettingValue;
@@ -72,7 +72,9 @@ typedef struct {
 
     CSTokenList tokens;
     CSettings settings;
-    bool debug;
+    
+	bool debug;
+	int type; // 0 if file, 1 if string
 } CSFile;
 
 /*
@@ -122,15 +124,9 @@ int CapySettings_GetAsBoolean(CSFile* pCSFile, char* name);
 */
 int CapySettings_ReadFile(CSFile* pCSFile);
 
-/*
-	Loads CapySettings file into memory
+CSFile CapySettings_LoadFromString(char* string, bool debug);
 
-	returns CSFile if good
-	returns CSFile { .data = NULL, .pos = -1, .debug = debug } if file not found
-	returns CSFile { .data = NULL, .pos = -2, .debug = debug } if couldn't allocate memory
-	returns CSFile { .data = NULL, .pos = -3, .debug = debug } if couldn't put data into memory
-*/
-CSFile CapySettings_OpenFile(char *path, bool debug);
+CSFile CapySettings_LoadFromFile(FILE* pFile, bool debug);
 
 void CapySettings_AddSetting(CSFile* pCSFile, CSettingType type, char* name, CSettingValue value);
 
