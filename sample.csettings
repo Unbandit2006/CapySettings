@@ -1,6 +1,7 @@
 name:               String = "Daniel"
 age:                Integer = 18
 hasDreams:          Boolean = true
+// Very hard to calc
 calculatedBenefits: Float = 1896.890000
 name:               String = "Bob"              // Based on new AddSetting function, the name should still be Daniel
 firstCapper, secCapper: String = "Skeeto", "Silent_Confidence"

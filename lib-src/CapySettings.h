@@ -13,6 +13,8 @@ typedef enum {
     TOKEN_EQUAL,
     TOKEN_COLON,
     TOKEN_COMMA,
+	TOKEN_NEW_LINE,
+	TOKEN_EOF,
 
     TOKEN_FLOAT,
     TOKEN_FLOAT_VALUE,
@@ -77,6 +79,13 @@ typedef struct {
 	bool debug;
 	int type; // 0 if file, 1 if string
 } CSFile;
+
+typedef struct {
+	int size;
+	int occupied;
+
+	CSToken* tokens;
+} Counter;
 
 /*
 	Returns the value of an Integer in int format

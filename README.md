@@ -48,7 +48,7 @@ Again if you modified the output please change the flags respective of your chan
 	- [x] New function CapySettings_LoadFromFile(FILE* pFile, bool debug);
 		Purpose is to leave opening to developer, and simply create the proper structs
 
-- [ ] Implement Ada notation
+- [x] Implement Ada notation
 	```capysettings
 	// For example:
 	Variable1, Variable2, Variable3: Integer = 1, 2, 3

@@ -30,7 +30,9 @@ def clean():
 
 def static_lib():
     try:
-        compile = sub.run(f"{CC} -c {execution_path}/lib-src/CapySettings.c -o {execution_path}/c-lib/static/CapySettings.o", shell=True, check=True, capture_output=True, text=True)
+        compile = sub.run(f"{CC} -c {execution_path}/lib-src/CapySettings.c -o {execution_path}/c-lib/static/CapySettings.o -Wall", shell=True, check=True, capture_output=True, text=True)
+        print(f"Normal lib\n\tOutput: {compile.stdout}\n\tError output: {compile.stderr}\n\tReturn code: {compile.returncode}\n")
+        
         compile1 = sub.run(f"ar rcs {execution_path}/c-lib/static/libCapySettings.a {execution_path}/c-lib/static/CapySettings.o", shell=True, check=True , capture_output=True, text=True)
 
         print("Compiled the static library")
@@ -46,17 +48,38 @@ def static_lib():
         return False
 
 
+def sanitize_lib():
+    try:
+        compile = sub.run(f"{CC} -c {execution_path}/lib-src/CapySettings.c -o {execution_path}/c-lib/static/CapySettings.o -fsanitize=address,leak,undefined,return -Wall", shell=True, check=True, capture_output=True, text=True)
+        print(f"SANITIZED\n\tOutput: {compile.stdout}\n\tError output: {compile.stderr}\n\tReturn code: {compile.returncode}\n")
+        
+        compile1 = sub.run(f"ar rcs {execution_path}/c-lib/static/libCapySettings.a {execution_path}/c-lib/static/CapySettings.o", shell=True, check=True , capture_output=True, text=True)
+
+        print("Compiled the static library")
+        
+        return True
+
+    except sub.CalledProcessError as error:
+        print("Error compiling CapySettings[static]")
+        print(f"\tOutput: {error.stdout}\n\tError output: {error.stderr}\n\tReturn code: {error.returncode}\n")
+
+        print("Compiled the static library")
+
+        return False
+
 def main():
     try:
         if platform.system().lower() == "windows":
-            compile = sub.run(f"{CC} main.c -o main.exe -Lc-lib/static -lCapySettings", shell=True, check=True , capture_output=True, text=True)
-            
+            compile = sub.run(f"{CC} main.c -o main.exe -Lc-lib/static -lCapySettings -Wall", shell=True, check=True , capture_output=True, text=True)
+            print(f"Normal main\n\tOutput: {compile.stdout}\n\tError output: {compile.stderr}\n\tReturn code: {compile.returncode}\n")
+        
             print("Compiled main")
 
             return True
 
         elif platform.system().lower() == "linux":
-            compile = sub.run(f"{CC} main.c -o main -Lc-lib/static -lCapySettings", shell=True, check=True , capture_output=True, text=True)
+            compile = sub.run(f"{CC} main.c -o main -Lc-lib/static -lCapySettings -Wall", shell=True, check=True , capture_output=True, text=True)
+            print(f"Normal main\n\tOutput: {compile.stdout}\n\tError output: {compile.stderr}\n\tReturn code: {compile.returncode}\n")
             
             print("Compiled main")
             
@@ -78,6 +101,7 @@ options = {
     "clean": clean,
     "static_lib": static_lib,
     "main": main,
+    "sanitize_lib": sanitize_lib
 }
 
 global executed
