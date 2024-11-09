@@ -62,11 +62,12 @@ Reads the CapySettingFile (csettings), properly parses it, and creates CSettings
 	3  | Allocation for literal error.
 	4  | Allocation for number error.
 	5  | Literal count is not equal to value count.
-	6  | No type was provided for CSetting.
-	7  | Not proper value for String.
-	8  | Not proper value for Boolean.
-	9  | Not proper value for type Float.
-	10 | Not proper value for type Integer.
+    6  | No colon and or no equal
+	7  | No type was provided for CSetting.
+	8  | Not proper value for String.
+	9  | Not proper value for Boolean.
+	10  | Not proper value for type Float.
+	11 | Not proper value for type Integer.
 	0  | All is good.
 
 ### Example:
@@ -119,7 +120,7 @@ Saves all of the settings to a file, by either creating it or overwriting it.
 	char*   path    | The path to the file that you want to put all of the Settings to.
 
 ### Returns:
-	11 | Unable to access file.
+	12 | Unable to access file.
 	0  | All is good.
 
 ### Examples:

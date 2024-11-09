@@ -184,11 +184,11 @@ static int Parse(CSFile* pCSFile, CSToken literal, CSToken value, CSTokenType ty
 		case (TOKEN_STRING): {
 			if (value.type != TOKEN_STRING_VALUE) {
 				if (pCSFile->debug) {
-					printf("{CapySettings} Not proper value for type String.\n{CapySettings} ERROR CODE: 7.\n");
+					printf("{CapySettings} Not proper value for type String.\n{CapySettings} ERROR CODE: 8.\n");
 				}
 
-				exit(7);
-				return 7;
+				exit(8);
+				return 8;
 			}
 
 			val.String = value.value;
@@ -198,11 +198,11 @@ static int Parse(CSFile* pCSFile, CSToken literal, CSToken value, CSTokenType ty
 		case (TOKEN_BOOLEAN): {
 			if (value.type != TOKEN_BOOLEAN_TRUE && value.type != TOKEN_BOOLEAN_FALSE) {
 				if (pCSFile->debug) {
-					printf("{CapySettings} Not proper value for type Boolean.\n{CapySettings} ERROR CODE: 8.\n");
+					printf("{CapySettings} Not proper value for type Boolean.\n{CapySettings} ERROR CODE: 9.\n");
 				}
 
-				exit(8);
-				return 8;
+				exit(9);
+				return 9;
 			}
 
 			if (value.type == TOKEN_BOOLEAN_TRUE) { val.Boolean = true; csettingType = BOOLEAN;  }
@@ -214,11 +214,11 @@ static int Parse(CSFile* pCSFile, CSToken literal, CSToken value, CSTokenType ty
 		case (TOKEN_FLOAT): {
 			if (value.type != TOKEN_FLOAT_VALUE) {
 				if (pCSFile->debug) {
-					printf("{CapySettings} Not proper value for type Float.\n{CapySettings} ERROR CODE: 9.\n");
+					printf("{CapySettings} Not proper value for type Float.\n{CapySettings} ERROR CODE: 10.\n");
 				}
 
-				exit(9);
-				return 9;
+				exit(10);
+				return 10;
 			}
 
 			val.Float = strtof(value.value, NULL);
@@ -228,11 +228,11 @@ static int Parse(CSFile* pCSFile, CSToken literal, CSToken value, CSTokenType ty
 		case (TOKEN_INTEGER): {
 			if (value.type != TOKEN_INTEGER_VALUE) {
 				if (pCSFile->debug) {
-					printf("{CapySettings} Not proper value for type Integer.\n{CapySettings} ERROR CODE: 10.\n");
+					printf("{CapySettings} Not proper value for type Integer.\n{CapySettings} ERROR CODE: 11.\n");
 				}
 
-				exit(10);
-				return 10;
+				exit(11);
+				return 11;
 			}
 
 			val.Integer = atoi(value.value);
@@ -254,8 +254,8 @@ int CapySettings_SaveFile(CSFile* pCSFile, char* path) {
     FILE* fp = fopen(path, "w");
 
     if (fp == NULL) {
-        printf("{CapySettings} Unable to access file.\n{CapySettings} ERROR CODE: 11.\n");
-        return 11;
+        printf("{CapySettings} Unable to access file.\n{CapySettings} ERROR CODE: 12.\n");
+        return 12;
     }
 
     for (int i = 0; i < pCSFile->settings.occupied; i++) {
@@ -505,12 +505,21 @@ int CapySettings_ReadFile(CSFile* pCSFile) {
 	};
 
 	CSTokenType type = -1;
-	// bool colon = false;     // NEED TO IMPLEMENT
-	// bool equal = false;     // NEED TO IMPLEMENT
+	bool colon = false;     // NEED TO IMPLEMENT
+	bool equal = false;     // NEED TO IMPLEMENT
 
 	for (int i = 0; i < pCSFile->tokens.occupied; i++) {
 		CSToken token = pCSFile->tokens.tokens[i];
 		if (token.type == TOKEN_NEW_LINE || token.type == TOKEN_EOF) {
+            if (!colon && !equal) {
+                if (pCSFile->debug) {
+                    printf("{CapySettings} No equal or colon on line %i.\n{CapySettings} ERROR CODE: 7.\n", pCSFile->tokens.tokens[i].line);
+                }
+				
+                exit(7);
+                return 7;
+            }
+
 			if (literals.occupied != values.occupied && literals.occupied != 0) {
 				if (pCSFile->debug) {
 					printf("{CapySettings} Literals and values are unequal on line %i.\n{CapySettings} ERROR CODE: 5.\n", pCSFile->tokens.tokens[i].line);
@@ -541,6 +550,8 @@ int CapySettings_ReadFile(CSFile* pCSFile) {
 			ResetCounter(&literals);
 			ResetCounter(&values);
 			type = -1;
+            colon = false;
+            equal = false;
 
 		} else {
 			if (token.type == TOKEN_LITERAL) {
@@ -557,7 +568,13 @@ int CapySettings_ReadFile(CSFile* pCSFile) {
 			) {
 				type = token.type;
 			
-			}
+            } else if (token.type == TOKEN_EQUAL) {
+                equal = true;
+
+            } else if (token.type == TOKEN_COLON) {
+                colon = true;
+
+            }
 
 		}
 	} 
@@ -682,7 +699,14 @@ void CapySettings_PrintAllSettings(CSFile* pCSFile) {
                 printf("\t\"%s\": \"%s\",\n", pCSFile->settings.objects[i].name, pCSFile->settings.objects[i].value.String);
             } break;
                 
-            case BOOLEAN:
+            case BOOLEAN: {
+                if (pCSFile->settings.objects[i].value.Boolean == true) {
+                    printf("\t\"%s\": %s,\n", pCSFile->settings.objects[i].name, "true");
+                } else {
+                    printf("\t\"%s\": %s,\n", pCSFile->settings.objects[i].name, "false");
+                }
+            } break;
+            
             case INTEGER: {
                 printf("\t\"%s\": %i,\n", pCSFile->settings.objects[i].name, pCSFile->settings.objects[i].value.Integer);
             } break;
