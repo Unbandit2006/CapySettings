@@ -17,7 +17,7 @@ configuration/markdown file type. I also wanted comments to better explain certa
 such a file, better understanding of what value is expected.
 
 ## Compile on Windows/MinGW
-So I predominantly work on a barebones Windows/MinGW build, so my ways maybe archaic, but they work for me.
+So I predominantly work on a barebones Windows/MinGW build, so my ways maybe archaic, but they work for me. You may also try the build.py, but I made it for my systems so it might not work.
 
 ### Static Library
 ```cmd

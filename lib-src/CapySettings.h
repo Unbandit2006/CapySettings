@@ -87,51 +87,17 @@ typedef struct {
 	CSToken* tokens;
 } Counter;
 
-/*
-	Returns the value of an Integer in int format
-    
-	if value != Integer then returns INT_MAX
-*/
+
 int CapySettings_GetAsInteger(CSFile* pCSFile, char* name);
 
-/*
-	Returns the value of an String in char* format
-
-	if value != String then returns ""
-*/
 char* CapySettings_GetAsString(CSFile* pCSFile, char* name);
 
-/*
-	Returns the value of an Float in double format
+float CapySettings_GetAsFloat(CSFile* pCSFile, char* name);
 
-	if value != Float then returns 0.0
-*/
-double CapySettings_GetAsDouble(CSFile* pCSFile, char* name);
+bool CapySettings_GetAsBoolean(CSFile* pCSFile, char* name);
 
-/*
-	Returns the value of an Boolean in int format
+void CapySettings_PrintAllSettings(CSFile* pCSFile);
 
-	if value != Boolean then returns -1
-*/
-int CapySettings_GetAsBoolean(CSFile* pCSFile, char* name);
-
-/*
-	Reads CapySettings file
-
-	returns 0 if good
-	returns 1 if string value not closed
-	returns 2 if string value cant be allocated
-	returns 3 if literal cant be allocated
-	returns 4 if number cant be allocated
-
-	returns 5 Not proper integer
-	returns 6 Not proper float
-	returns 7 Not proper string
-	returns 8 Not proper boolean
-	returns 9 Illegal token
-
-	returns 10 Missing colon
-*/
 int CapySettings_ReadFile(CSFile* pCSFile);
 
 CSFile CapySettings_LoadFromString(char* string, bool debug);
@@ -140,7 +106,7 @@ CSFile CapySettings_LoadFromFile(FILE* pFile, bool debug);
 
 void CapySettings_AddSetting(CSFile* pCSFile, CSettingType type, char* name, CSettingValue value);
 
-int CapySettimgs_SaveFile(CSettings* pCsettings, char* path);
+int CapySettings_SaveFile(CSettings* pCsettings, char* path);
 
 void CapySettings_CloseFile(CSFile* pCSFile);
 

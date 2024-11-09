@@ -1,174 +1,201 @@
-### CapySettings_OpenFile ('char* path', 'bool debug')
-Loads the CapySetting file into memory
+# CapySettings documentation
 
-Args:
-----
-char* path: The path for the CapySetting file
-bool debug: Show developer output
-
-Returns
--------
- - CSFile { .pos = -1 } | ERROR: File not found.
- - CSFile { .pos = -2 } | ERROR: Can't allocate memory.
- - CSFile { .pos = -3 } | ERROR: Can't copy file into struct.
-
-Example
--------
+## Example code
 ```c
-CSFile settings = CapySettings_OpenFile("sample.csettings", false);
+#include "CapySettings.h"
+
+CSFile string = CapySettings_LoadFromString("name: String = 'Daniel'", false);
+CapySettings_ReadFile(&string);
+
+CapySettings_PrintAllSettings(&string);
+
+CapySettings_CloseFile(&string);
 ```
 
-
-### CapySettings_ReadFile ('CSFile* pCSFile',)
-Reads the CapySetting file
-
-Args:
+CapySettings_LoadFromString (char* string, bool debug)
 ----
-CSFile* pCSFile: Pointer to CSFile struct provided by CapySettings_OpenFile
+Prepares proper structs, and information for proper reading.
 
-Returns
--------
- - 1 | ERROR: String not closed in file.
- - 2 | ERROR: String value can't be allocated
- - 3 | ERROR: Literal value can't be allocated
- - 4 | ERROR: Number value can't be allocated
- - 5 | ERROR: Not proper Integer declaration
- - 6 | ERROR: Not proper Float declaration
- - 7 | ERROR: Not proper String declaration
- - 8 | ERROR: Not proper Boolean declaration
- - 9 | ERROR: Not proper Illegal token
- - 10 | ERROR: Missing colon
+### Arguments:
+    char* string | String to be processed.
+	bool  debug  | Flag to get debug info.
 
-Example
--------
+### Returns:
+    CSFile | CapySettingsFile that will be used for almost everything.
+
+### Example:
 ```c
-int value = CapySettings_ReadFile(&settings);
+CSFile csFile = CapySettings_LoadFromString("developer_name: String = \"Daniel\"", true);
 ```
+</br>
 
 
-### CapySettings_AddSetting ('CSFile* pCSFile', 'CSettingType type', 'char* name', 'CSettingValue value')
-Adds a setting (name, value) pair to the CSettings
-
-Args:
+CapySettings_LoadFromFile (FILE* pFile, bool debug)
 ----
-CSFile* pCSFile: Pointer to CSFile struct provided by CapySettings_OpenFile
-CSettingType type: The type of the setting to save as
-char* name: Name of the setting
-CSettingValue value: Value of the setting
+Prepares proper structs, and information for proper reading, loads file into memory.
 
-Example
--------
+### Arguments:
+	FILE* pFile | A pointer to the that you want to use. Be sure to open in binary mode reading.
+	bool  debug | Flag to get debug info.
+
+### Returns:
+	CSFile | CapySetingFile that will be used for almost everything.
+
+### Examples:
 ```c
-CapySettings_AddSetting(&settings);
+FILE* pfile = fopen("sample.csettings", "rb");
+CSFile csFile = CapySettings_LoadFromFile(pfile, true);
 ```
+</br>
 
 
-### CapySettings_SaveFile ('CSFile* pCSFile', 'char* path')
-Saves all the settings to a set path
-
-Args:
+CapySettings_ReadFile (CSFile* pCSFile)
 ----
-CSFile* pCSFile: Pointer to CSFile struct provided by CapySettings_OpenFile
-char* path: Path to save the settings to
+Reads the CapySettingFile (csettings), properly parses it, and creates CSettings.
 
-Returns
--------
- - 11 | ERROR: Unaccessible file
+### Arguments:
+	CSFile* pCSFile | A pointer to the CSFile made by one of the load functions.
 
-Example
--------
+### Returns:
+	1  | Reached the end of file without closing quote.
+	2  | Allocation for string error.
+	3  | Allocation for literal error.
+	4  | Allocation for number error.
+	5  | Literal count is not equal to value count.
+	6  | No type was provided for CSetting.
+	7  | Not proper value for String.
+	8  | Not proper value for Boolean.
+	9  | Not proper value for type Float.
+	10 | Not proper value for type Integer.
+	0  | All is good.
+
+### Example:
 ```c
-CapySettings_SaveFile(&settings, "sample.csettings");
+int result = CapySettings_ReadFile(&csFile);
 ```
+</br>
 
 
-### CapySettings_GetAsInteger ('CSFile* pCSFile', 'char* name')
-Returns the value of the setting as an Integer for whatever language you have.
-
-Args:
+CapySettings_CloseFile (CSFile* pCSFile)
 ----
-CSFile* pCSFile: Pointer to CSFile struct provided by CapySettings_OpenFile
-char* name: Name of the setting to search for.
+Closes and deallocated all the memory used by the library.
 
-Returns
--------
- - int INT_MAX | ERROR: Unable to find setting with name
+### Arguments:
+	CSFile* pCSFile | A pointer to the CSFile made by one of the load functions.
 
-Example
--------
+### Example:
 ```c
-int ageValue = CapySetting_GetAsInteger(&settings, "age");
+CapySettings_CloseFile(&csFile);
 ```
+</br>
 
 
-### CapySettings_GetAsString ('CSFile* pCSFile', 'char* name')
-Returns the value of the setting as an String for whatever language you have.
-
-Args:
+CapySettings_AddSetting (CSFile* pCSFile, CSettingType type, char* name, CSettingValue value)
 ----
-CSFile* pCSFile: Pointer to CSFile struct provided by CapySettings_OpenFile
-char* name: Name of the setting to search for.
+Adds a CSetting to the settings for a developer to use.
 
-Returns
--------
- - char*  | ERROR: Unable to find setting with name
+### Arguments:
+	CSFile*       pCSFile | A pointer to the CSFile made by one of the load functions.
+	CSettingType  type    | An enum of CSettingType specifing what is the type of the Setting.
+	char*         name    | Name of the CSetting. {name: type = value}
+	CSettingValue value   | Union of the correct value.
 
-Example
--------
+### Examples:
 ```c
-char* nameValue = CapySettings_GetAsString(&settings, "name");
+CSettingValue value;
+value.Integer = 18;
+
+CapySettings_AddSetting(&csFile, INTEGER, "age", value);
 ```
+</br>
 
 
-### CapySettings_GetAsDouble ('CSFile* pCSFile', 'char* name')
-Returns the value of the setting as an Double for whatever language you have.
-
-Args:
+CapySettings_SaveFile (CSFile* pCSFile, char* path)
 ----
-CSFile* pCSFile: Pointer to CSFile struct provided by CapySettings_OpenFile
-char* name: Name of the setting to search for.
+Saves all of the settings to a file, by either creating it or overwriting it.
 
-Returns
--------
- - double 0.0 | ERROR: Unable to find setting with name
+### Arguments:
+	CSFile* pCSFile | A pointer to the CSFile made by one of the load functions.
+	char*   path    | The path to the file that you want to put all of the Settings to.
 
-Example
--------
+### Returns:
+	11 | Unable to access file.
+	0  | All is good.
+
+### Examples:
 ```c
-double calculatedBenefits = CapySettings_GetAsDouble(&settings, "calculatedBenefits");
+int result = CapySettings_SaveFile(&csFile, "sample_saved.csettings");
 ```
+</br>
 
 
-### CapySettings_GetAsBoolean ('CSFile* pCSFile', 'char* name')
-Returns the value of the setting as an Boolean for whatever language you have.
-
-Args:
+CapySettings_GetAsInteger (CSFile* pCSFile, char* name)
 ----
-CSFile* pCSFile: Pointer to CSFile struct provided by CapySettings_OpenFile
-char* name: Name of the setting to search for.
+Returns the value of an CSetting Integer in int format 
 
-Returns
--------
- - int -1 | ERROR: Unable to find setting with name
+### Arguments:
+	CSFile* pCSFile | A pointer to the CSFile made by one of the load functions.
+	char*   name    | Name of the CSetting you want to retrieve.
 
-Example
--------
+### Returns:
+	INT_MAX | If value is not an Integer
+
+### Examples:
 ```c
-int hasDreams = CapySettings_GetAsBoolean(&settings, "hasDreams");
+int age = CapySettings_GetAsInteger(&csFile, "age");
 ```
+</br>
 
 
-### CapySettings_CloseFile ('CSFile* pCSFile',)
-Deallocates all the memory used
-
-Args:
+CapySettings_GetAsString (CSFile* pCSFile, char* name)
 ----
-CSFile* pCSFile: Pointer to CSFile struct provided by CapySettings_OpenFile
+Returns the value of an CSetting String in char* format 
 
-Example
--------
+### Arguments:
+	CSFile* pCSFile | A pointer to the CSFile made by one of the load functions.
+	char*   name    | Name of the CSetting you want to retrieve.
+
+### Returns:
+	"" | If value is not an String
+
+### Examples:
 ```c
-CapySettings_CloseFile(&settings);
+int name = CapySettings_GetAsString(&csFile, "name");
 ```
+</br>
 
 
+CapySettings_GetAsBoolean (CSFile* pCSFile, char* name)
+----
+Returns the value of an CSetting Boolean in bool format 
+
+### Arguments:
+	CSFile* pCSFile | A pointer to the CSFile made by one of the load functions.
+	char*   name    | Name of the CSetting you want to retrieve.
+
+### Returns:
+	false | If value is not an Boolean
+
+### Examples:
+```c
+bool isDope = CapySettings_GetAsBoolean(&csFile, "dope");
+```
+</br>
+
+
+CapySettings_GetAsFloat (CSFile* pCSFile, char* name)
+----
+Returns the value of an CSetting Float in float format 
+
+### Arguments:
+	CSFile* pCSFile | A pointer to the CSFile made by one of the load functions.
+	char*   name    | Name of the CSetting you want to retrieve.
+
+### Returns:
+	0.0f | If value is not an Float
+
+### Examples:
+```c
+float percentageOfSuccess = CapySettings_GetAsFloat(&csFile, "success");
+```
+</br>
