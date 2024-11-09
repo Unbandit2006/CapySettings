@@ -258,26 +258,26 @@ int CapySettings_SaveFile(CSFile* pCSFile, char* path) {
         return 11;
     }
 
-    for (int i = 0; i < pCSFile->settings->occupied; i++) {
-        switch (pCSFile->settings->objects[i].type) {
+    for (int i = 0; i < pCSFile->settings.occupied; i++) {
+        switch (pCSFile->settings.objects[i].type) {
             case STRING: {
-                fprintf(fp, "%s: String = \"%s\"\n", pCSFile->settings->objects[i].name, pCSFile->settings->objects[i].value.String);
+                fprintf(fp, "%s: String = \"%s\"\n", pCSFile->settings.objects[i].name, pCSFile->settings.objects[i].value.String);
             } break;
                 
             case BOOLEAN: {
-                if (pCSFile->settings->->objects[i].value.Boolean == 1) {
-                    fprintf(fp, "%s: Boolean = %s\n", pCSFile->settings->objects[i].name, "true");
+                if (pCSFile->settings.objects[i].value.Boolean == 1) {
+                    fprintf(fp, "%s: Boolean = %s\n", pCSFile->settings.objects[i].name, "true");
                 } else {
-                    fprintf(fp, "%s: Boolean = %s\n", pCSFile->settings->objects[i].name, "false");
+                    fprintf(fp, "%s: Boolean = %s\n", pCSFile->settings.objects[i].name, "false");
                 }
             } break;
 
             case INTEGER: {
-                fprintf(fp, "%s: Integer = %i\n", pCSFile->settings->objects[i].name, pCSFile->settings->objects[i].value.Integer);
+                fprintf(fp, "%s: Integer = %i\n", pCSFile->settings.objects[i].name, pCSFile->settings.objects[i].value.Integer);
             } break;
 
             case FLOAT: {
-                fprintf(fp, "%s: Float = %f\n", pCSFile->settings->objects[i].name, pCSFile->settings->objects[i].value.Float);
+                fprintf(fp, "%s: Float = %f\n", pCSFile->settings.objects[i].name, pCSFile->settings.objects[i].value.Float);
             } break;
         }
     }

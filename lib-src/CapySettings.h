@@ -106,7 +106,7 @@ CSFile CapySettings_LoadFromFile(FILE* pFile, bool debug);
 
 void CapySettings_AddSetting(CSFile* pCSFile, CSettingType type, char* name, CSettingValue value);
 
-int CapySettings_SaveFile(CSettings* pCsettings, char* path);
+int CapySettings_SaveFile(CSFile* pCSFile, char* path);
 
 void CapySettings_CloseFile(CSFile* pCSFile);
 
