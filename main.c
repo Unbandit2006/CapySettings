@@ -7,9 +7,13 @@ int main() {
 	//FILE* pfile = fopen("sample.csettings", "rb");
 	//CSFile string = CapySettings_LoadFromFile(pfile, true);
 
-    CSFile string = CapySettings_LoadFromString("name: String = 'Daniel'\nidk: Boolean = true", false);
+    CSFile string = CapySettings_LoadFromString("name: String = 'Daniel'\nidk: Boolean = true\nsmth, cool: Boolean = true, true", false);
 
 	CapySettings_ReadFile(&string);
+
+    CSettingValue value;
+    value.String = "Is good band";
+    CapySettings_AddSetting(&string, CSettingType_STRING, "Greenday", value);
 
     CapySettings_PrintAllSettings(&string);
 

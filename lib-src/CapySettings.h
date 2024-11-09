@@ -43,10 +43,10 @@ typedef struct {
 
 
 typedef enum {
-    INTEGER,
-    FLOAT,
-    BOOLEAN,
-    STRING,
+    CSettingType_INTEGER,
+    CSettingType_FLOAT,
+    CSettingType_BOOLEAN,
+    CSettingType_STRING,
 } CSettingType;
 
 typedef union {

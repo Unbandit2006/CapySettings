@@ -192,7 +192,7 @@ static int Parse(CSFile* pCSFile, CSToken literal, CSToken value, CSTokenType ty
 			}
 
 			val.String = value.value;
-			csettingType = STRING;
+			csettingType = CSettingType_STRING;
 		} break;
 
 		case (TOKEN_BOOLEAN): {
@@ -205,9 +205,9 @@ static int Parse(CSFile* pCSFile, CSToken literal, CSToken value, CSTokenType ty
 				return 9;
 			}
 
-			if (value.type == TOKEN_BOOLEAN_TRUE) { val.Boolean = true; csettingType = BOOLEAN;  }
+			if (value.type == TOKEN_BOOLEAN_TRUE) { val.Boolean = true; csettingType = CSettingType_BOOLEAN;  }
 			
-			if (value.type == TOKEN_BOOLEAN_FALSE) { val.Boolean = false; csettingType = BOOLEAN; }
+			if (value.type == TOKEN_BOOLEAN_FALSE) { val.Boolean = false; csettingType = CSettingType_BOOLEAN; }
 		
 		} break;
 
@@ -222,7 +222,7 @@ static int Parse(CSFile* pCSFile, CSToken literal, CSToken value, CSTokenType ty
 			}
 
 			val.Float = strtof(value.value, NULL);
-			csettingType = FLOAT;
+			csettingType = CSettingType_FLOAT;
 		} break;
 
 		case (TOKEN_INTEGER): {
@@ -236,7 +236,7 @@ static int Parse(CSFile* pCSFile, CSToken literal, CSToken value, CSTokenType ty
 			}
 
 			val.Integer = atoi(value.value);
-			csettingType = INTEGER;
+			csettingType = CSettingType_INTEGER;
 		} break;
 
 		default: {
@@ -260,11 +260,11 @@ int CapySettings_SaveFile(CSFile* pCSFile, char* path) {
 
     for (int i = 0; i < pCSFile->settings.occupied; i++) {
         switch (pCSFile->settings.objects[i].type) {
-            case STRING: {
+            case CSettingType_STRING: {
                 fprintf(fp, "%s: String = \"%s\"\n", pCSFile->settings.objects[i].name, pCSFile->settings.objects[i].value.String);
             } break;
                 
-            case BOOLEAN: {
+            case CSettingType_BOOLEAN: {
                 if (pCSFile->settings.objects[i].value.Boolean == 1) {
                     fprintf(fp, "%s: Boolean = %s\n", pCSFile->settings.objects[i].name, "true");
                 } else {
@@ -272,11 +272,11 @@ int CapySettings_SaveFile(CSFile* pCSFile, char* path) {
                 }
             } break;
 
-            case INTEGER: {
+            case CSettingType_INTEGER: {
                 fprintf(fp, "%s: Integer = %i\n", pCSFile->settings.objects[i].name, pCSFile->settings.objects[i].value.Integer);
             } break;
 
-            case FLOAT: {
+            case CSettingType_FLOAT: {
                 fprintf(fp, "%s: Float = %f\n", pCSFile->settings.objects[i].name, pCSFile->settings.objects[i].value.Float);
             } break;
         }
@@ -586,7 +586,7 @@ int CapySettings_GetAsInteger( CSFile* pCSFile, char* name ) {
     for (int i = 0; i < pCSFile->settings.occupied; i++) {
         if (strcmp(pCSFile->settings.objects[i].name, name) == 0) {
             
-            if (pCSFile->settings.objects[i].type == INTEGER) {
+            if (pCSFile->settings.objects[i].type == CSettingType_INTEGER) {
                 return pCSFile->settings.objects[i].value.Integer;
             } else {
                 return INT_MAX;
@@ -602,7 +602,7 @@ char* CapySettings_GetAsString( CSFile* pCSFile, char* name ) {
     for (int i = 0; i < pCSFile->settings.occupied; i++) {
         if (strcmp(pCSFile->settings.objects[i].name, name) == 0) {
             
-            if (pCSFile->settings.objects[i].type == STRING) {
+            if (pCSFile->settings.objects[i].type == CSettingType_STRING) {
                 return pCSFile->settings.objects[i].value.String;
             } else {
                 return "";
@@ -618,7 +618,7 @@ float CapySettings_GetAsFloat( CSFile* pCSFile, char* name ) {
     for (int i = 0; i < pCSFile->settings.occupied; i++) {
         if (strcmp(pCSFile->settings.objects[i].name, name) == 0) {
             
-            if (pCSFile->settings.objects[i].type == FLOAT) {
+            if (pCSFile->settings.objects[i].type == CSettingType_FLOAT) {
                 return pCSFile->settings.objects[i].value.Float;
             } else {
                 return 0.0f;
@@ -634,7 +634,7 @@ bool CapySettings_GetAsBoolean( CSFile* pCSFile, char* name ) {
     for (int i = 0; i < pCSFile->settings.occupied; i++) {
         if (strcmp(pCSFile->settings.objects[i].name, name) == 0) {
             
-            if (pCSFile->settings.objects[i].type == BOOLEAN) {
+            if (pCSFile->settings.objects[i].type == CSettingType_BOOLEAN) {
                 return pCSFile->settings.objects[i].value.Boolean;
             } else {
                 return false;
@@ -661,16 +661,16 @@ void CapySettings_CloseFile(CSFile* pCSFile) {
         printf("{\n");
         for (int i = 0; i < pCSFile->settings.occupied; i++) {
             switch (pCSFile->settings.objects[i].type) {
-                case STRING: {
+                case CSettingType_STRING: {
                     printf("\t\"%s\": \"%s\",\n", pCSFile->settings.objects[i].name, pCSFile->settings.objects[i].value.String);
                 } break;
                 
-                case BOOLEAN:
-                case INTEGER: {
+                case CSettingType_BOOLEAN:
+                case CSettingType_INTEGER: {
                     printf("\t\"%s\": %i,\n", pCSFile->settings.objects[i].name, pCSFile->settings.objects[i].value.Integer);
                 } break;
 
-                case FLOAT: {
+                case CSettingType_FLOAT: {
                     printf("\t\"%s\": %f,\n", pCSFile->settings.objects[i].name, pCSFile->settings.objects[i].value.Float);
                 } break;
             }
@@ -695,11 +695,11 @@ void CapySettings_PrintAllSettings(CSFile* pCSFile) {
     printf("{\n");
     for (int i = 0; i < pCSFile->settings.occupied; i++) {
         switch (pCSFile->settings.objects[i].type) {
-            case STRING: {
+            case CSettingType_STRING: {
                 printf("\t\"%s\": \"%s\",\n", pCSFile->settings.objects[i].name, pCSFile->settings.objects[i].value.String);
             } break;
                 
-            case BOOLEAN: {
+            case CSettingType_BOOLEAN: {
                 if (pCSFile->settings.objects[i].value.Boolean == true) {
                     printf("\t\"%s\": %s,\n", pCSFile->settings.objects[i].name, "true");
                 } else {
@@ -707,11 +707,11 @@ void CapySettings_PrintAllSettings(CSFile* pCSFile) {
                 }
             } break;
             
-            case INTEGER: {
+            case CSettingType_INTEGER: {
                 printf("\t\"%s\": %i,\n", pCSFile->settings.objects[i].name, pCSFile->settings.objects[i].value.Integer);
             } break;
 
-            case FLOAT: {
+            case CSettingType_FLOAT: {
                 printf("\t\"%s\": %f,\n", pCSFile->settings.objects[i].name, pCSFile->settings.objects[i].value.Float);
             } break;
         }
