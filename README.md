@@ -36,7 +36,7 @@ Again if you modified the output please change the flags respective of your chan
 
 ## Documentation
 
-[Link to docs](DOC.md)
+[Link to docs](information/DOC.md)
 
 
 ## Next steps
