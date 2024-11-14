@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 #include "CapySettings.h"
 
@@ -28,62 +29,21 @@ CSTokenType keywordType[KEYWORD_COUNT] = {
 /// IMPLEMENTATION ///
 /////////////////////
 
-/*
-Loads CapySettings file into memory
+CSFile CapySettings_LoadFromFile(FILE* pFile, bool debug) {
 
-returns CSFile if good
-returns CSFile { .data = NULL, .pos = -1, .debug = debug } if file not found
-returns CSFile { .data = NULL, .pos = -2, .debug = debug } if couldn't allocate memory
-returns CSFile { .data = NULL, .pos = -3, .debug = debug } if couldn't put data into memory
-*/
-CSFile CapySettings_OpenFile( char *path, bool debug ) {
+	fseek(pFile, 0, SEEK_END);
+	int fileSize = ftell(pFile);	
+	fseek(pFile, 0, SEEK_SET);
 
-	CSFile csettings = { 0 };
-    CSFile error = {
-        .data = NULL,
-        .pos = -1,
-        .debug = debug,
-    };
-
-    FILE* fp = fopen(path, "rb");
-    if ( !fp ) {
-        if (debug) {
-            fprintf(stdout, "{CapySettings} Error opening file '%s'.\n", path);
-        }
-
-        return error;
-    }
-
-    fseek ( fp, 0L, SEEK_END );
-    int size = ftell ( fp );
-    rewind( fp );
-
-    char* buffer = calloc( size + 1, sizeof(char) );
-    if ( !buffer ) {
-        if (debug) {
-            fprintf(stdout, "{CapySettings} Error allocating memory.\n");
-        }
-
-        error.pos = -2;
-
-        return error;
-    }
-
-    if ( fread( buffer, sizeof(char), size, fp ) != size ) {
-        if (debug) {
-            fprintf(stdout, "{CapySettings} Error reading entire file.\n");
-        }
-
-        error.pos = -3;
-
-        return error;
-    }
-
-    buffer[size] = '\0';
-
-    fclose( fp );
-
-    // CSFile stuffs
+	char* string = calloc(fileSize+1, sizeof(char));
+	size_t read = fread(string, 1, fileSize, pFile);
+	string[read] = '\0';
+	
+	CSFile file = {
+		.data = string,
+		.pos = 0,
+		.debug = debug,
+	};
 
     CSettings settings = {
         .size = 10,
@@ -97,13 +57,38 @@ CSFile CapySettings_OpenFile( char *path, bool debug ) {
         .tokens = calloc(10, sizeof(CSToken)),
     };
 
-    csettings.data = buffer;
-    csettings.pos = 0;
-    csettings.debug = debug;
-    csettings.tokens = tokenList;
-    csettings.settings = settings;
+	file.settings = settings;
+	file.tokens = tokenList;
+	file.type = 0;
 
-    return csettings;
+	return file;
+}
+
+CSFile CapySettings_LoadFromString(char* string, bool debug) {
+
+	CSFile file = {
+		.data = string,
+		.pos = 0,
+		.debug = debug,
+	};
+
+    CSettings settings = {
+        .size = 10,
+        .occupied = 0,
+        .objects = calloc(10, sizeof(CSettingObj) ),
+    };
+
+    CSTokenList tokenList = {
+        .occupied = 0,
+        .size = 10,
+        .tokens = calloc(10, sizeof(CSToken)),
+    };
+
+	file.settings = settings;
+	file.tokens = tokenList;
+	file.type = 1;
+
+	return file;
 }
 
 static void AddToken( CSTokenList* pList, CSTokenType type, char* value, int line ) {
@@ -138,9 +123,28 @@ static char* ConvertTypeToString(CSTokenType type) {
         case (TOKEN_BOOLEAN_TRUE): { return "BOOLEAN_TRUE"; } break;
         case (TOKEN_BOOLEAN_FALSE): { return "BOOLEAN_FALSE"; } break;
         case (TOKEN_ILLEGAL): { return "ILLEGAL"; } break;
+		case (TOKEN_NEW_LINE): { return "NEW_LINE"; } break;
+		case (TOKEN_COMMA): { return "COMMA"; } break;
+		case (TOKEN_EOF): { return "END_OF_FILE"; } break;
         default: { return "Unknown token"; } break;
     }
 
+}
+
+static void ResetCounter(Counter* pCounter) {
+	pCounter->size = 10;
+	pCounter->occupied = 0;
+	pCounter->tokens = calloc(10, sizeof(CSToken));
+}
+
+static void AddToCounter(Counter* pCounter, CSToken token) {
+    if (pCounter->occupied >= pCounter->size) {
+        pCounter->size *= 2;
+        pCounter->tokens = realloc(pCounter->tokens, sizeof(CSToken) * pCounter->size);
+    }
+
+    pCounter->tokens[pCounter->occupied] = token;
+    pCounter->occupied++;
 }
 
 void CapySettings_AddSetting( CSFile* pCSFile, CSettingType type, char* name, CSettingValue value ) {
@@ -152,53 +156,128 @@ void CapySettings_AddSetting( CSFile* pCSFile, CSettingType type, char* name, CS
 
 	bool able = true;
 
-	for (int i = 0; i < pCSFile->settings->occupied; i++) {
+	for (int i = 0; i < pCSFile->settings.occupied; i++) {
 
-		if (strcmp(name, pCSFile->settings->objects[i].name) == 0) {
+		if (strcmp(name, pCSFile->settings.objects[i].name) == 0) {
 			able = false;
 		}
 
 	}
 
 	if (able == true) {
-		if (pCSFile->settings->occupied >= pCSFile->settings->size) {
-			pCSFile->settings->size *= 2;
-			pCSFile->settings->objects = realloc(pCSFile->settings->objects, sizeof(CSettingObj) * pCSFile->settings->size);
+		if (pCSFile->settings.occupied >= pCSFile->settings.size) {
+			pCSFile->settings.size *= 2;
+			pCSFile->settings.objects = realloc(pCSFile->settings.objects, sizeof(CSettingObj) * pCSFile->settings.size);
 		}
 
-		pCSFile->settings->objects[pCSFile->settings->occupied] = setting;
-		pCSFile->settings->occupied++;
+		pCSFile->settings.objects[pCSFile->settings.occupied] = setting;
+		pCSFile->settings.occupied++;
 	}
 }
 
-int CapySettimgs_SaveFile(CSettings* pCsettings, char* path) {
+static int Parse(CSFile* pCSFile, CSToken literal, CSToken value, CSTokenType type) {
+	CSettingValue val;
+	CSettingType csettingType;
+
+	switch (type) {
+
+		case (TOKEN_STRING): {
+			if (value.type != TOKEN_STRING_VALUE) {
+				if (pCSFile->debug) {
+					printf("{CapySettings} Not proper value for type String.\n{CapySettings} ERROR CODE: 8.\n");
+				}
+
+				exit(8);
+				return 8;
+			}
+
+			val.String = value.value;
+			csettingType = CSettingType_STRING;
+		} break;
+
+		case (TOKEN_BOOLEAN): {
+			if (value.type != TOKEN_BOOLEAN_TRUE && value.type != TOKEN_BOOLEAN_FALSE) {
+				if (pCSFile->debug) {
+					printf("{CapySettings} Not proper value for type Boolean.\n{CapySettings} ERROR CODE: 9.\n");
+				}
+
+				exit(9);
+				return 9;
+			}
+
+			if (value.type == TOKEN_BOOLEAN_TRUE) { val.Boolean = true; csettingType = CSettingType_BOOLEAN;  }
+			
+			if (value.type == TOKEN_BOOLEAN_FALSE) { val.Boolean = false; csettingType = CSettingType_BOOLEAN; }
+		
+		} break;
+
+		case (TOKEN_FLOAT): {
+			if (value.type != TOKEN_FLOAT_VALUE) {
+				if (pCSFile->debug) {
+					printf("{CapySettings} Not proper value for type Float.\n{CapySettings} ERROR CODE: 10.\n");
+				}
+
+				exit(10);
+				return 10;
+			}
+
+			val.Float = strtof(value.value, NULL);
+			csettingType = CSettingType_FLOAT;
+		} break;
+
+		case (TOKEN_INTEGER): {
+			if (value.type != TOKEN_INTEGER_VALUE) {
+				if (pCSFile->debug) {
+					printf("{CapySettings} Not proper value for type Integer.\n{CapySettings} ERROR CODE: 11.\n");
+				}
+
+				exit(11);
+				return 11;
+			}
+
+			val.Integer = atoi(value.value);
+			csettingType = CSettingType_INTEGER;
+		} break;
+
+		default: {
+
+		} break;
+
+	}
+
+	CapySettings_AddSetting(pCSFile, csettingType, literal.value, val);
+
+	return 0;
+}
+
+int CapySettings_SaveFile(CSFile* pCSFile, char* path) {
     FILE* fp = fopen(path, "w");
 
     if (fp == NULL) {
-        printf("{CapySettings} Unable to access file.\n{CapySettings} ERROR CODE: 11.\n");
-        return 11;
+        printf("{CapySettings} Unable to access file.\n{CapySettings} ERROR CODE: 12.\n");
+        return 12;
     }
 
-    for (int i = 0; i < pCsettings->occupied; i++) {
-        switch (pCsettings->objects[i].type) {
-            case STRING: {
-                fprintf(fp, "%s: String = \"%s\"\n", pCsettings->objects[i].name, pCsettings->objects[i].value);
+    for (int i = 0; i < pCSFile->settings.occupied; i++) {
+        switch (pCSFile->settings.objects[i].type) {
+            case CSettingType_STRING: {
+                fprintf(fp, "%s: String = \"%s\"\n", pCSFile->settings.objects[i].name, pCSFile->settings.objects[i].value.String);
             } break;
                 
-            case BOOLEAN: {
-                if (pCsettings->objects[i].value.Boolean == 1) {
-                    fprintf(fp, "%s: Boolean = %s\n", pCsettings->objects[i].name, "true");
+            case CSettingType_BOOLEAN: {
+                if (pCSFile->settings.objects[i].value.Boolean == 1) {
+                    fprintf(fp, "%s: Boolean = %s\n", pCSFile->settings.objects[i].name, "true");
                 } else {
-                    fprintf(fp, "%s: Boolean = %s\n", pCsettings->objects[i].name, "false");
+                    fprintf(fp, "%s: Boolean = %s\n", pCSFile->settings.objects[i].name, "false");
                 }
             } break;
 
-            case INTEGER: {
-                fprintf(fp, "%s: Integer = %i\n", pCsettings->objects[i].name, pCsettings->objects[i].value);
+            case CSettingType_INTEGER: {
+                fprintf(fp, "%s: Integer = %i\n", pCSFile->settings.objects[i].name, pCSFile->settings.objects[i].value.Integer);
             } break;
 
-            case FLOAT: {
-                fprintf(fp, "%s: Float = %f\n", pCsettings->objects[i].name, pCsettings->objects[i].value.Float);
+            case CSettingType_FLOAT: {
+                fprintf(fp, "%s: Float = %f\n", pCSFile->settings.objects[i].name, pCSFile->settings.objects[i].value.Float);
             } break;
         }
     }
@@ -208,26 +287,9 @@ int CapySettimgs_SaveFile(CSettings* pCsettings, char* path) {
     return 0;
 }
 
-/*
-	Reads CapySettings file
-
-	returns 0 if good
-	returns 1 if string value not closed
-	returns 2 if string value cant be allocated
-	returns 3 if literal cant be allocated
-	returns 4 if number cant be allocated
-
-	returns 5 Not proper integer
-	returns 6 Not proper float
-	returns 7 Not proper string
-	returns 8 Not proper boolean
-	returns 9 Illegal token
-
-	returns 10 Missing colon
-	*/
-int CapySettings_ReadFile( CSFile* pCSFile ) {
+int CapySettings_ReadFile(CSFile* pCSFile) {
 		
-    int lineCount = 1;
+	int lineCount = 1;
 	int lineCountC = 1;
 
 	//////////////
@@ -235,322 +297,296 @@ int CapySettings_ReadFile( CSFile* pCSFile ) {
 	//////////////	
 	while (pCSFile->data[pCSFile->pos] != '\0') {
 
-        switch (pCSFile->data[pCSFile->pos]) {
+		switch (pCSFile->data[pCSFile->pos]) {
         
-            case '/': {
-                if (pCSFile->data[pCSFile->pos + 1] == '/') {
-                    while (pCSFile->data[pCSFile->pos] != '\n') {
-                        pCSFile->pos++;
-                        lineCountC++;
-                    }
+			case '/': {
+				if (pCSFile->data[pCSFile->pos + 1] == '/') {
+					while (pCSFile->data[pCSFile->pos] != '\n') {
+						pCSFile->pos++;
+						lineCountC++;
+					}
                 
-                } else {
-                    AddToken(&pCSFile->tokens, TOKEN_ILLEGAL, NULL, lineCount);
-                }
+				} else {
+					AddToken(&pCSFile->tokens, TOKEN_ILLEGAL, NULL, lineCount);
+				}
 
-            } break;
+			} break;
 
-            case ' ':
-            case '\t': {
-                pCSFile->pos++;
-                lineCountC++;
-            } break;
+			case ' ':
+			case '\t': {
+				pCSFile->pos++;
+				lineCountC++;
+			} break;
 
-            case '\n': {
-                lineCount++;
-                lineCountC = 1;
-                pCSFile->pos++;                
-            } break;
+			case '\n': {
+				AddToken(&pCSFile->tokens, TOKEN_NEW_LINE, NULL, lineCount);
+                
+				lineCount++;
+				lineCountC = 1;
+				pCSFile->pos++;
+			} break;
 
-            case '\r': {
-                pCSFile->pos++;
-                lineCountC++; 
-            } break;
+			case '\r': {
+				pCSFile->pos++;
+				lineCountC++;
+			} break;
 
-            case '=': {
-                AddToken(&pCSFile->tokens, TOKEN_EQUAL, NULL, lineCount);
-                pCSFile->pos++;
-                lineCountC++;                
-            } break;
+			case '=': {
+				AddToken(&pCSFile->tokens, TOKEN_EQUAL, NULL, lineCount);
+				pCSFile->pos++;
+				lineCountC++;
+			} break;
             
-            case ':': {
-                AddToken(&pCSFile->tokens, TOKEN_COLON, NULL, lineCount);
-                pCSFile->pos++;
-                lineCountC++;
-            } break;
+			case ':': {
+				AddToken(&pCSFile->tokens, TOKEN_COLON, NULL, lineCount);
+				pCSFile->pos++;
+				lineCountC++;
+			} break;
 
-            case '\'':
-            case '"': {
-                char endChar = pCSFile->data[pCSFile->pos];
+			case '\'':
+			case '"': {
+				char endChar = pCSFile->data[pCSFile->pos];
 
-                pCSFile->pos++;
-                lineCountC++;
+				pCSFile->pos++;
+				lineCountC++;
 
-                int start = pCSFile->pos;
+				int start = pCSFile->pos;
 
-                while ( pCSFile->data[pCSFile->pos] != endChar && pCSFile->data[pCSFile->pos] != '\0' ) {
-                    pCSFile->pos++;
-                    lineCountC++;			
-                }
+				while (pCSFile->data[pCSFile->pos] != endChar && pCSFile->data[pCSFile->pos] != '\0') {
+					pCSFile->pos++;
+					lineCountC++;
+				}
 
-                if (pCSFile->data[pCSFile->pos] == '\0') {
-                    if (pCSFile->debug) {
-                        printf("{CapySettings} Reached end of file without string closure.\n{CapySettings} ERROR CODE: 1.\n");
-                    }
-                    return 1;
-                }
+				if (pCSFile->data[pCSFile->pos] == '\0') {
+					if (pCSFile->debug) {
+						printf("{CapySettings} Reached end of file without string closure.\n{CapySettings} ERROR CODE: 1.\n");
+					}
+					return 1;
+				}
 
-                int end = pCSFile->pos-1;
+				int end = pCSFile->pos - 1;
 
-                char* string = (char*) calloc(end - start + 2, sizeof(char));
-                if (string == NULL) {
-                    if (pCSFile->debug) {
-                        printf("{CapySettings} Couldn't allocate memory for string.\n{CapySettings} ERROR CODE: 2.\n");
-                    }
-                    return 2;
-                }
+				char* string = (char*) calloc(end - start + 2, sizeof(char));
+				if (string == NULL) {
+					if (pCSFile->debug) {
+						printf("{CapySettings} Couldn't allocate memory for string.\n{CapySettings} ERROR CODE: 2.\n");
+					}
+					return 2;
+				}
 
-                memcpy(string, pCSFile->data + start, end - start + 1);
-                string[end - start + 1] = '\0'; // TODO: Needs to be freed
+				memcpy(string, pCSFile->data + start, end - start + 1);
+				string[end - start + 1] = '\0'; // TODO: Needs to be freed
 
-                AddToken(&pCSFile->tokens, TOKEN_STRING_VALUE, string, lineCount);
+				AddToken(&pCSFile->tokens, TOKEN_STRING_VALUE, string, lineCount);
 
-                pCSFile->pos++;
-                lineCountC++;
-            } break;
+				pCSFile->pos++;
+				lineCountC++;
+			} break;
 
+			case ',': {
+				AddToken(&pCSFile->tokens, TOKEN_COMMA, NULL, lineCount);
 
-            default: {
-                bool isSomething = false;
+				pCSFile->pos++;
+				lineCountC++;
+			} break;
 
-                if (isalpha(pCSFile->data[pCSFile->pos]) != 0 || pCSFile->data[pCSFile->pos] == '_') {
-                    int start = pCSFile->pos;
+			default: {
+				bool isSomething = false;
 
-                    pCSFile->pos++;
-                    lineCountC++;
+				if (isalpha(pCSFile->data[pCSFile->pos]) != 0 || pCSFile->data[pCSFile->pos] == '_') {
+					int start = pCSFile->pos;
 
-                    while (isalnum(pCSFile->data[pCSFile->pos]) != 0 || pCSFile->data[pCSFile->pos] == '_' || pCSFile->data[pCSFile->pos] == '-') {
-                        pCSFile->pos++;
-                        lineCountC++;			
-                    }
+					pCSFile->pos++;
+					lineCountC++;
 
-                    int end = pCSFile->pos-1;
+					while (isalnum(pCSFile->data[pCSFile->pos]) != 0 || pCSFile->data[pCSFile->pos] == '_' || pCSFile->data[pCSFile->pos] == '-') {
+						pCSFile->pos++;
+						lineCountC++;
+					}
+
+					int end = pCSFile->pos - 1;
 			
-                    char* string = (char*) calloc(end - start + 2, sizeof(char));
-                    if (string == NULL) {
-                        if (pCSFile->debug) {
-                            printf("{CapySettings} Couldn't allocate memory for literal.\n{CapySettings} ERROR CODE: 3.\n");
-                        }
-                        return 3;
-                    }
-                    memcpy(string, pCSFile->data + start, end - start + 1);
-                    string[end - start + 1] = '\0'; // TODO: Needs to be freed
+					char* string = (char*) calloc(end - start + 2, sizeof(char));
+					if (string == NULL) {
+						if (pCSFile->debug) {
+							printf("{CapySettings} Couldn't allocate memory for literal.\n{CapySettings} ERROR CODE: 3.\n");
+						}
+						return 3;
+					}
+					memcpy(string, pCSFile->data + start, end - start + 1);
+					string[end - start + 1] = '\0'; // TODO: Needs to be freed
             
-                    bool isKeyword = false;
-                    for (int i = 0; i < KEYWORD_COUNT; i++) {
-                        if (strcmp(string, keywords[i]) == 0) {
-                            AddToken(&pCSFile->tokens, keywordType[i], NULL, lineCount);
-                            isKeyword = true;
-                        }
-                    }
+					bool isKeyword = false;
+					for (int i = 0; i < KEYWORD_COUNT; i++) {
+						if (strcmp(string, keywords[i]) == 0) {
+							AddToken(&pCSFile->tokens, keywordType[i], NULL, lineCount);
+							isKeyword = true;
+						}
+					}
 
-                    if (isKeyword == false) {
-                        AddToken(&pCSFile->tokens, TOKEN_LITERAL, string, lineCount);
-                    }
+					if (isKeyword == false) {
+						AddToken(&pCSFile->tokens, TOKEN_LITERAL, string, lineCount);
+					}
 		
-                    isSomething = true;
-                }
+					isSomething = true;
+				}
                 
-                if (isdigit(pCSFile->data[pCSFile->pos]) != 0) {
-                    int start = pCSFile->pos;
+				if (isdigit(pCSFile->data[pCSFile->pos]) != 0) {
+					int start = pCSFile->pos;
 
-                    pCSFile->pos++;
-                    lineCountC++;
+					pCSFile->pos++;
+					lineCountC++;
             
-                    bool isFloat = false;
+					bool isFloat = false;
 
-                    while (isdigit(pCSFile->data[pCSFile->pos]) != 0) {
-                        pCSFile->pos++;
-                        lineCountC++;			
+					while (isdigit(pCSFile->data[pCSFile->pos]) != 0) {
+						pCSFile->pos++;
+						lineCountC++;
 
-                        if (pCSFile->data[pCSFile->pos] == '.' && isdigit(pCSFile->data[pCSFile->pos+1]) != 0 ) {
-                            pCSFile->pos++;
-                            lineCountC++;
-                            isFloat = true;
+						if (pCSFile->data[pCSFile->pos] == '.' && isdigit(pCSFile->data[pCSFile->pos + 1]) != 0) {
+							pCSFile->pos++;
+							lineCountC++;
+							isFloat = true;
 
-                        }
-                    }
+						}
+					}
 
-                    int end = pCSFile->pos-1;
+					int end = pCSFile->pos - 1;
 			
-                    char* string = (char*) calloc(end - start + 2, sizeof(char));
-                    if (string == NULL) {
-                        if (pCSFile->debug) {
-                            printf("{CapySettings} Couldn't allocate memory for number.\n{CapySettings} ERROR CODE: 4.\n");
-                        }
-                        return 4;
-                    }
-                    memcpy(string, pCSFile->data + start, end - start + 1);
-                    string[end - start + 2] = '\0'; // TODO: Needs to be freed
+					char* string = (char*) calloc(end - start + 2, sizeof(char));
+					if (string == NULL) {
+						if (pCSFile->debug) {
+							printf("{CapySettings} Couldn't allocate memory for number.\n{CapySettings} ERROR CODE: 4.\n");
+						}
+						return 4;
+					}
+					memcpy(string, pCSFile->data + start, end - start + 1);
+					string[end - start + 1] = '\0';
 
-                    if (isFloat == true) {
-                        AddToken(&pCSFile->tokens, TOKEN_FLOAT_VALUE, string, lineCount);
-                    } else {
-                        AddToken(&pCSFile->tokens, TOKEN_INTEGER_VALUE, string, lineCount);
-                    }
+					if (isFloat == true) {
+						AddToken(&pCSFile->tokens, TOKEN_FLOAT_VALUE, string, lineCount);
+					} else {
+						AddToken(&pCSFile->tokens, TOKEN_INTEGER_VALUE, string, lineCount);
+					}
 
-                    isSomething = true;
-                }
+					isSomething = true;
+				}
 
-                if (isSomething == false) {
-                    AddToken(&pCSFile->tokens, TOKEN_ILLEGAL, NULL, lineCount);
+				if (isSomething == false) {
+					AddToken(&pCSFile->tokens, TOKEN_ILLEGAL, NULL, lineCount);
                     
-                    pCSFile->pos++;
-                    lineCountC++;
-                }
+					pCSFile->pos++;
+					lineCountC++;
+				}
             
-            } break;
+			} break;
 
-        }
+		}
 
 	}
 
-    //////////////////
-    /// PRECHECKER ///
-    /////////////////
-    for (int i = 0; i < pCSFile->tokens.occupied; i++) {
-        switch (pCSFile->tokens.tokens[i].type) {
-        
-            case TOKEN_INTEGER: {
-                if (pCSFile->tokens.tokens[i + 2].type != TOKEN_INTEGER_VALUE) {
-                    if (pCSFile->debug) {
-                        printf("{CapySettings} Unusable value for integer on line %i.\n{CapySettings} ERROR CODE: 5.\n", pCSFile->tokens.tokens[i].line);
-                    }
+	AddToken(&pCSFile->tokens, TOKEN_EOF, NULL, lineCount);
 
-                    exit(5);
-                    return 5;
-                }
-            } break;
 
-            case TOKEN_FLOAT: {
-                if (pCSFile->tokens.tokens[i + 2].type != TOKEN_FLOAT_VALUE) {
-                    if (pCSFile->debug) {
-                        printf("{CapySettings} Unusable value for float on line %i.\n{CapySettings} ERROR CODE: 6.\n", pCSFile->tokens.tokens[i].line);
-                    }
+	//////////////////
+	/// PRECHECKER ///
+	/////////////////
 
-                    exit(6);
-                    return 6;
-                }
-            } break;
+	Counter literals = {
+		.size = 10,
+		.occupied = 0,
+		.tokens = calloc(10, sizeof(CSToken))
+	};
 
-            case TOKEN_STRING: {
-                if (pCSFile->tokens.tokens[i + 2].type != TOKEN_STRING_VALUE) {
-                    if (pCSFile->debug) {
-                        printf("{CapySettings} Unusable value for string on line %i.\n{CapySettings} ERROR CODE: 7.\n", pCSFile->tokens.tokens[i].line);
-                    }
+	Counter values = {
+		.size = 10,
+		.occupied = 0,
+		.tokens = calloc(10, sizeof(CSToken))
+	};
 
-                    exit(7);
-                    return 7;
-                }
-            } break;
-            
-            case TOKEN_BOOLEAN: {
-                if (pCSFile->tokens.tokens[i + 2].type != TOKEN_BOOLEAN_FALSE && pCSFile->tokens.tokens[i + 2].type != TOKEN_BOOLEAN_TRUE) {
-                    if (pCSFile->debug) {
-                        printf("{CapySettings} Unusable value for boolean on line %i.\n{CapySettings} ERROR CODE: 8.\n", pCSFile->tokens.tokens[i].line);
-                    }
+	CSTokenType type = -1;
+	bool colon = false;     // NEED TO IMPLEMENT
+	bool equal = false;     // NEED TO IMPLEMENT
 
-                    exit(8);
-                    return 8;
-                }
-            } break;
-
-            case TOKEN_ILLEGAL: {
+	for (int i = 0; i < pCSFile->tokens.occupied; i++) {
+		CSToken token = pCSFile->tokens.tokens[i];
+		if (token.type == TOKEN_NEW_LINE || token.type == TOKEN_EOF) {
+            if (!colon && !equal) {
                 if (pCSFile->debug) {
-                    printf("{CapySettings} Illegal token on line %i.\n{CapySettings} ERROR CODE: 9.\n", pCSFile->tokens.tokens[i].line);
+                    printf("{CapySettings} No equal or colon on line %i.\n{CapySettings} ERROR CODE: 7.\n", pCSFile->tokens.tokens[i].line);
                 }
-
-                exit(9);
-                return 9; 
-            } break;
-
-        }
-    }
-
-    //////////////
-    /// PARSE ///
-    /////////////
-    for (int i = 0; i < pCSFile->tokens.occupied; i++) {
-
-        if (pCSFile->tokens.tokens[i].type == TOKEN_LITERAL) {
-        
-            if (pCSFile->tokens.tokens[i + 1].type == TOKEN_COLON) {
-                switch (pCSFile->tokens.tokens[i + 4].type) {
-
-                    case TOKEN_STRING_VALUE: {
-                        CSettingValue value;
-                        value.String = pCSFile->tokens.tokens[i + 4].value;
-                        CapySettings_AddSetting(&pCSFile->settings, STRING, pCSFile->tokens.tokens[i].value, value);
-                    
-                    } break;
-
-                    case TOKEN_INTEGER_VALUE: {
-                        CSettingValue value;
-                        value.Integer = atoi(pCSFile->tokens.tokens[i + 4].value);
-                        CapySettings_AddSetting(&pCSFile->settings, INTEGER, pCSFile->tokens.tokens[i].value, value);
-                    
-                    } break;
-
-                    case TOKEN_BOOLEAN_TRUE: {
-                        CSettingValue value;
-                        value.Boolean = true;
-                        CapySettings_AddSetting(&pCSFile->settings, BOOLEAN, pCSFile->tokens.tokens[i].value, value);
-                    
-                    } break;
-
-                    case TOKEN_BOOLEAN_FALSE: {
-                        CSettingValue value;
-                        value.Boolean = false;
-                        CapySettings_AddSetting(&pCSFile->settings, BOOLEAN, pCSFile->tokens.tokens[i].value, value);
-                    
-                    } break;
-
-                    case TOKEN_FLOAT_VALUE: {
-                        char* end;
-
-                        CSettingValue value;
-                        value.Float = strtod(pCSFile->tokens.tokens[i + 4].value, &end);
-                        CapySettings_AddSetting(&pCSFile->settings, FLOAT, pCSFile->tokens.tokens[i].value, value);                       
-                    
-                    } break;
-                }
-
-            } else {
-                if (pCSFile->debug) {
-                    printf("{CapySettings} Missing colon on line %i\n{CapySettings} ERROR CODE: 10\n", pCSFile->tokens.tokens[i].line);
-                }
-
-                exit(10);
-                return 10;
+				
+                exit(7);
+                return 7;
             }
-            
-        }
 
-    }
+			if (literals.occupied != values.occupied && literals.occupied != 0) {
+				if (pCSFile->debug) {
+					printf("{CapySettings} Literals and values are unequal on line %i.\n{CapySettings} ERROR CODE: 5.\n", pCSFile->tokens.tokens[i].line);
+				}
+				
+				exit(5);
+				return 5;
+			}
 
-    return 0;
+			if (type == -1 && literals.occupied != 0) {
+				if (pCSFile->debug) {
+					printf("{CapySettings} No type provided on line %i.\n{CapySettings} ERROR CODE: 6.\n", pCSFile->tokens.tokens[i].line);
+				}
+				
+				exit(6);
+				return 6;
+			}
+
+			if (literals.occupied == 1) {
+				Parse(pCSFile, literals.tokens[0], values.tokens[0], type);
+
+			} else if (literals.occupied > 1) {
+				for (int i = 0; i < literals.occupied; i++) {
+					Parse(pCSFile, literals.tokens[i], values.tokens[i], type);
+				}
+			}
+
+			ResetCounter(&literals);
+			ResetCounter(&values);
+			type = -1;
+            colon = false;
+            equal = false;
+
+		} else {
+			if (token.type == TOKEN_LITERAL) {
+				AddToCounter(&literals, token);
+
+			} else if (
+				token.type == TOKEN_FLOAT_VALUE || token.type == TOKEN_STRING_VALUE || token.type == TOKEN_INTEGER_VALUE || token.type == TOKEN_BOOLEAN_TRUE
+				|| token.type == TOKEN_BOOLEAN_FALSE
+			) {
+				AddToCounter(&values, token);
+			
+			} else if (
+				token.type == TOKEN_STRING || token.type == TOKEN_FLOAT || token.type == TOKEN_INTEGER || token.type == TOKEN_BOOLEAN
+			) {
+				type = token.type;
+			
+            } else if (token.type == TOKEN_EQUAL) {
+                equal = true;
+
+            } else if (token.type == TOKEN_COLON) {
+                colon = true;
+
+            }
+
+		}
+	} 
+
+	return 0;
 }
 
-/*
-    Returns the value of an Integer in int format
-    
-    if value != Integer then returns INT_MAX
-*/
 int CapySettings_GetAsInteger( CSFile* pCSFile, char* name ) {
     for (int i = 0; i < pCSFile->settings.occupied; i++) {
         if (strcmp(pCSFile->settings.objects[i].name, name) == 0) {
             
-            if (pCSFile->settings.objects[i].type == INTEGER) {
+            if (pCSFile->settings.objects[i].type == CSettingType_INTEGER) {
                 return pCSFile->settings.objects[i].value.Integer;
             } else {
                 return INT_MAX;
@@ -558,18 +594,15 @@ int CapySettings_GetAsInteger( CSFile* pCSFile, char* name ) {
 
         }
     }
+
+    return 0;
 }
 
-/*
-    Returns the value of an String in char* format
-
-    if value != String then returns ""
-*/
 char* CapySettings_GetAsString( CSFile* pCSFile, char* name ) {
     for (int i = 0; i < pCSFile->settings.occupied; i++) {
         if (strcmp(pCSFile->settings.objects[i].name, name) == 0) {
             
-            if (pCSFile->settings.objects[i].type == STRING) {
+            if (pCSFile->settings.objects[i].type == CSettingType_STRING) {
                 return pCSFile->settings.objects[i].value.String;
             } else {
                 return "";
@@ -577,66 +610,67 @@ char* CapySettings_GetAsString( CSFile* pCSFile, char* name ) {
 
         }
     }
+
+    return "";
 }
 
-/*
-    Returns the value of an Float in double format
-
-    if value != Float then returns 0.0
-*/
-double CapySettings_GetAsDouble( CSFile* pCSFile, char* name ) {
+float CapySettings_GetAsFloat( CSFile* pCSFile, char* name ) {
     for (int i = 0; i < pCSFile->settings.occupied; i++) {
         if (strcmp(pCSFile->settings.objects[i].name, name) == 0) {
             
-            if (pCSFile->settings.objects[i].type == FLOAT) {
+            if (pCSFile->settings.objects[i].type == CSettingType_FLOAT) {
                 return pCSFile->settings.objects[i].value.Float;
             } else {
-                return 0.0;
+                return 0.0f;
             }
 
         }
     }
+
+    return 0.0f;
 }
 
-/*
-    Returns the value of an Boolean in int format
-
-    if value != Boolean then returns -1
-*/
-int CapySettings_GetAsBoolean( CSFile* pCSFile, char* name ) {
+bool CapySettings_GetAsBoolean( CSFile* pCSFile, char* name ) {
     for (int i = 0; i < pCSFile->settings.occupied; i++) {
         if (strcmp(pCSFile->settings.objects[i].name, name) == 0) {
             
-            if (pCSFile->settings.objects[i].type == BOOLEAN) {
+            if (pCSFile->settings.objects[i].type == CSettingType_BOOLEAN) {
                 return pCSFile->settings.objects[i].value.Boolean;
             } else {
-                return -1;
+                return false;
             }
 
         }
     }
+
+	return false;
 }
 
 void CapySettings_CloseFile(CSFile* pCSFile) {
 
-    free( pCSFile->data );
-    pCSFile->data = NULL;
-    pCSFile->pos = 0;
+	if (pCSFile->type == 0) {
+		free(pCSFile->data);
+		pCSFile->data = NULL;
+		pCSFile->pos = 0;
+	}
 
     if (pCSFile->debug) { 
+		printf("TOKEN COUNT: %i\n", pCSFile->tokens.occupied);
+		printf("SETTINGS COUNT: %i\n", pCSFile->settings.occupied);
+
         printf("{\n");
         for (int i = 0; i < pCSFile->settings.occupied; i++) {
             switch (pCSFile->settings.objects[i].type) {
-                case STRING: {
-                    printf("\t\"%s\": \"%s\",\n", pCSFile->settings.objects[i].name, pCSFile->settings.objects[i].value);
+                case CSettingType_STRING: {
+                    printf("\t\"%s\": \"%s\",\n", pCSFile->settings.objects[i].name, pCSFile->settings.objects[i].value.String);
                 } break;
                 
-                case BOOLEAN:
-                case INTEGER: {
-                    printf("\t\"%s\": %i,\n", pCSFile->settings.objects[i].name, pCSFile->settings.objects[i].value);
+                case CSettingType_BOOLEAN:
+                case CSettingType_INTEGER: {
+                    printf("\t\"%s\": %i,\n", pCSFile->settings.objects[i].name, pCSFile->settings.objects[i].value.Integer);
                 } break;
 
-                case FLOAT: {
+                case CSettingType_FLOAT: {
                     printf("\t\"%s\": %f,\n", pCSFile->settings.objects[i].name, pCSFile->settings.objects[i].value.Float);
                 } break;
             }
@@ -655,4 +689,32 @@ void CapySettings_CloseFile(CSFile* pCSFile) {
             pCSFile->tokens.tokens[i].value = NULL;
         }
     }
+}
+
+void CapySettings_PrintAllSettings(CSFile* pCSFile) {
+    printf("{\n");
+    for (int i = 0; i < pCSFile->settings.occupied; i++) {
+        switch (pCSFile->settings.objects[i].type) {
+            case CSettingType_STRING: {
+                printf("\t\"%s\": \"%s\",\n", pCSFile->settings.objects[i].name, pCSFile->settings.objects[i].value.String);
+            } break;
+                
+            case CSettingType_BOOLEAN: {
+                if (pCSFile->settings.objects[i].value.Boolean == true) {
+                    printf("\t\"%s\": %s,\n", pCSFile->settings.objects[i].name, "true");
+                } else {
+                    printf("\t\"%s\": %s,\n", pCSFile->settings.objects[i].name, "false");
+                }
+            } break;
+            
+            case CSettingType_INTEGER: {
+                printf("\t\"%s\": %i,\n", pCSFile->settings.objects[i].name, pCSFile->settings.objects[i].value.Integer);
+            } break;
+
+            case CSettingType_FLOAT: {
+                printf("\t\"%s\": %f,\n", pCSFile->settings.objects[i].name, pCSFile->settings.objects[i].value.Float);
+            } break;
+        }
+    }
+    printf("}\n");
 }

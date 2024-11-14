@@ -17,7 +17,7 @@ configuration/markdown file type. I also wanted comments to better explain certa
 such a file, better understanding of what value is expected.
 
 ## Compile on Windows/MinGW
-So I predominantly work on a barebones Windows/MinGW build, so my ways maybe archaic, but they work for me.
+So I predominantly work on a barebones Windows/MinGW build, so my ways maybe archaic, but they work for me. You may also try the build.py, but I made it for my systems so it might not work.
 
 ### Static Library
 ```cmd
@@ -36,13 +36,59 @@ Again if you modified the output please change the flags respective of your chan
 
 ## Documentation
 
-[Link to docs](DOC.md)
+[Link to docs](information/DOC.md)
 
 
 ## Next steps
+--- Version 1 ---
 - [x] Fix CapySettings_AddSetting to not add multiple settings of the same name.
-- [] Implement arrays
-- [] Make a CapySettings_EditSetting function to edit values in the CapySettings
+
+- [x] Fix library for linux. Skeeto reported bug, I got the same results.
+	- [x] Change reading to be buffer based
+	- [x] New function CapySettings_LoadFromFile(FILE* pFile, bool debug);
+		Purpose is to leave opening to developer, and simply create the proper structs
+
+- [x] Implement Ada notation
+	```capysettings
+	// For example:
+	Variable1, Variable2, Variable3: Integer = 1, 2, 3
+	```
+
+
+--- Version 2 ---
+- [ ] Float conversion is iffy, and not precise
+	```capysettings
+	//For example:
+	calculatedBenefits: Float = 1896.87
+		
+	// Returns:
+	//	"calculatedBenefits": 1896.869995
+	// Should return:
+	//  "calculatedBenefits": 1896.87
+
+- [ ] Implement arrays
+- [ ] Make a CapySettings_EditSetting function to edit values in the CapySettings
+- [ ] Inplace Literals
+	```capysettings
+	// For example:
+	song: String = "Adieu"
+	name: String = name    // "Adieu"
+	```
+
+
+## Consideration
+- New datatypes for different size
+	```capysettings
+	// For example:
+		Int64     // (default, Integer|Int)
+		Int32    
+		Int16
+		Int8
+		
+		String64  // (default, String)
+		String32
+		...
+	```
 
 ## Future
-- [] Python implementation
+- [ ] Python implementation

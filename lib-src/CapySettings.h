@@ -12,6 +12,9 @@ typedef enum {
     TOKEN_LITERAL,
     TOKEN_EQUAL,
     TOKEN_COLON,
+    TOKEN_COMMA,
+	TOKEN_NEW_LINE,
+	TOKEN_EOF,
 
     TOKEN_FLOAT,
     TOKEN_FLOAT_VALUE,
@@ -40,15 +43,15 @@ typedef struct {
 
 
 typedef enum {
-    INTEGER,
-    FLOAT,
-    BOOLEAN,
-    STRING,
+    CSettingType_INTEGER,
+    CSettingType_FLOAT,
+    CSettingType_BOOLEAN,
+    CSettingType_STRING,
 } CSettingType;
 
 typedef union {
     int   Integer;
-    double Float; // done to get more percision than a float
+    float Float; 
     bool  Boolean;
     char* String;
 } CSettingValue;
@@ -72,69 +75,38 @@ typedef struct {
 
     CSTokenList tokens;
     CSettings settings;
-    bool debug;
+    
+	bool debug;
+	int type; // 0 if file, 1 if string
 } CSFile;
 
-/*
-	Returns the value of an Integer in int format
-    
-	if value != Integer then returns INT_MAX
-*/
+typedef struct {
+	int size;
+	int occupied;
+
+	CSToken* tokens;
+} Counter;
+
+
 int CapySettings_GetAsInteger(CSFile* pCSFile, char* name);
 
-/*
-	Returns the value of an String in char* format
-
-	if value != String then returns ""
-*/
 char* CapySettings_GetAsString(CSFile* pCSFile, char* name);
 
-/*
-	Returns the value of an Float in double format
+float CapySettings_GetAsFloat(CSFile* pCSFile, char* name);
 
-	if value != Float then returns 0.0
-*/
-double CapySettings_GetAsDouble(CSFile* pCSFile, char* name);
+bool CapySettings_GetAsBoolean(CSFile* pCSFile, char* name);
 
-/*
-	Returns the value of an Boolean in int format
+void CapySettings_PrintAllSettings(CSFile* pCSFile);
 
-	if value != Boolean then returns -1
-*/
-int CapySettings_GetAsBoolean(CSFile* pCSFile, char* name);
-
-/*
-	Reads CapySettings file
-
-	returns 0 if good
-	returns 1 if string value not closed
-	returns 2 if string value cant be allocated
-	returns 3 if literal cant be allocated
-	returns 4 if number cant be allocated
-
-	returns 5 Not proper integer
-	returns 6 Not proper float
-	returns 7 Not proper string
-	returns 8 Not proper boolean
-	returns 9 Illegal token
-
-	returns 10 Missing colon
-*/
 int CapySettings_ReadFile(CSFile* pCSFile);
 
-/*
-	Loads CapySettings file into memory
+CSFile CapySettings_LoadFromString(char* string, bool debug);
 
-	returns CSFile if good
-	returns CSFile { .data = NULL, .pos = -1, .debug = debug } if file not found
-	returns CSFile { .data = NULL, .pos = -2, .debug = debug } if couldn't allocate memory
-	returns CSFile { .data = NULL, .pos = -3, .debug = debug } if couldn't put data into memory
-*/
-CSFile CapySettings_OpenFile(char *path, bool debug);
+CSFile CapySettings_LoadFromFile(FILE* pFile, bool debug);
 
 void CapySettings_AddSetting(CSFile* pCSFile, CSettingType type, char* name, CSettingValue value);
 
-int CapySettimgs_SaveFile(CSettings* pCsettings, char* path);
+int CapySettings_SaveFile(CSFile* pCSFile, char* path);
 
 void CapySettings_CloseFile(CSFile* pCSFile);
 
