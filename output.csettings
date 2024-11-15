@@ -1,0 +1,5 @@
+name: String = "Daniel"
+idk: Boolean = true
+smth: Boolean = true
+cool: Boolean = true
+Greenday: String = "Is good band"

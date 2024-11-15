@@ -301,7 +301,7 @@ int CapySettings_ReadFile(CSFile* pCSFile) {
         
 			case '/': {
 				if (pCSFile->data[pCSFile->pos + 1] == '/') {
-					while (pCSFile->data[pCSFile->pos] != '\n') {
+					while (pCSFile->data[pCSFile->pos] != '\n' || pCSFile->data[pCSFile->pos] != '\0') {
 						pCSFile->pos++;
 						lineCountC++;
 					}
